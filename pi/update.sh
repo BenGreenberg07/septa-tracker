@@ -56,6 +56,7 @@ git remote get-url upstream >/dev/null 2>&1 || git remote add upstream "$UPSTREA
 git fetch --quiet origin
 
 stamp=$(date +%Y%m%d-%H%M%S)
+before=$(git rev-parse HEAD)
 step "2. Protecting anything edited directly on the Pi"
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   git switch --quiet -c "pi-backup-$stamp"
@@ -82,7 +83,6 @@ if ! git merge-base --is-ancestor HEAD origin/main; then
 fi
 
 step "3. Updating the code"
-before=$(git rev-parse HEAD)
 git merge --quiet --ff-only origin/main
 after=$(git rev-parse HEAD)
 git branch --quiet --set-upstream-to=origin/main main 2>/dev/null || true
@@ -92,7 +92,6 @@ else
   echo "  ${G}Updated.${O} New since last time:"
   git log --format='    %h  %s' "$before..$after"
 fi
-chmod +x pi/*.sh 2>/dev/null || true
 
 step "4. Checking the Python libraries"
 # shellcheck source=/dev/null
