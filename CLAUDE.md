@@ -24,6 +24,8 @@ while and recovered in September 2026.
 ## Read this before changing anything
 
 - **`LAB-GUIDE.md`** is the step-by-step operating guide. Start there.
+- **`HARDWARE.md`** records confirmed hardware faults (under-voltage, heat,
+  panel 14 red), the evidence for each, and what to buy.
 - **`rpi5/TRACKING.md`** explains how the live train tracking works.
 - **`pi/`** holds the maintenance scripts. `pi/doctor.sh` is read-only and is
   almost always the right first command.
