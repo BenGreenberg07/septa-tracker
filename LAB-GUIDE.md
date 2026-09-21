@@ -224,23 +224,53 @@ Tell the professor what you found; the numbers are in `~/septa-temp-log.csv`.
 
 ---
 
-## Everyday: getting new code onto the display
+## Getting my latest changes onto the display
 
-1. Change the code on your Mac. Test it with **Start Panel.command**, which
-   shows the board in your browser.
-2. Double-click **Push to Pi.command**. It asks for a one-line description,
-   uploads to GitHub, and if it can reach the Pi, updates the Pi and restarts
-   the display.
-3. If it can't reach the Pi, your code is still on GitHub. On the Pi run:
+Whenever Claude fixes something and pushes it, this is the whole routine. Run
+it on the Pi:
 
-   ```bash
-   cd ~/septa-tracker && ./pi/update.sh
-   ```
+```bash
+cd ~/septa-tracker
+./pi/update.sh
+./pi/try-script.sh rpi5/prod/swarthmore-tracked.py
+```
 
-With Tailscale working you can also double-click **Pi Temperature.command** or
-**Pi Health Check.command** on your Mac, from anywhere.
+- `update.sh` pulls the new code and restarts the display service. It backs up
+  anything edited directly on the Pi first, so nothing is lost.
+- `try-script.sh` runs it in the foreground so you can watch it. Ctrl-C when
+  you are happy, and the service takes over again.
 
----
+If you are happy and want it to be what starts at boot:
+
+```bash
+./pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py
+```
+
+That is all. You do not need the long `curl` command again; that was only for
+the very first time, before the Pi had `pi/update.sh`.
+
+**If `update.sh` fails**, pull directly and try again:
+
+```bash
+cd ~/septa-tracker && git pull origin main
+```
+
+**If it complains about local changes**, park them and pull:
+
+```bash
+git stash && git pull origin main
+```
+
+### Changing code on your Mac
+
+Edit, test locally with `./run-sim.sh` (the board renders at
+http://127.0.0.1:8800, no hardware needed), then:
+
+```bash
+git add -A && git commit -m "what you changed" && git push origin main
+```
+
+Then run the three lines at the top of this section on the Pi.
 
 ## Script reference
 
@@ -255,15 +285,17 @@ With Tailscale working you can also double-click **Pi Temperature.command** or
 | `set-panel-script.sh <file>` | Chooses what runs at boot; `--show`, `--revert` | Yes |
 | `update.sh` | Pulls your latest code from GitHub and restarts | Yes |
 | `setup-remote.sh` | One-time SSH and Tailscale setup | Yes |
+| `../rpi5/tools/panel-test.py` | Dead pixel and wiring test patterns (run via `try-script.sh`) | No |
+| `../rpi5/tools/api-check.py` | Explains what the board is showing and why | No |
 
-**On your Mac** (double-click in Finder):
+**On your Mac**:
 
-| File | What it does |
+| Command | What it does |
 |---|---|
-| `Start Panel.command` / `Stop Panel.command` | Board in your browser, no Pi needed |
-| `Push to Pi.command` | Commit, upload, and update the Pi |
-| `Pi Temperature.command` | Live temperature, remotely |
-| `Pi Health Check.command` | `doctor.sh`, remotely |
+| `./run-sim.sh` | Renders the board in your browser, no Pi needed |
+| `git push origin main` | Sends your changes to GitHub for the Pi to pull |
+| `ssh fetcar@septa-pi ~/septa-tracker/pi/temp.sh` | Live temperature, remotely |
+| `ssh fetcar@septa-pi ~/septa-tracker/pi/doctor.sh` | Health check, remotely |
 
 ---
 

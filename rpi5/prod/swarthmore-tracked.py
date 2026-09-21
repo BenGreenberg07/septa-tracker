@@ -122,20 +122,6 @@ def parse_trains(data, direction_key, count=1):
                       and "Media" not in origin and "Wawa" not in origin):
                     continue
 
-                sched_dt = None
-                try:
-                    sched_dt = datetime.strptime(entry["sched_time"],
-                                                 "%Y-%m-%d %H:%M:%S.%f")
-                    if sched_dt < now:
-                        continue
-                except (KeyError, ValueError):
-                    pass
-
-                sched = entry["sched_time"][11:16]
-                hour, minute = int(sched[:2]), int(sched[3:])
-                ampm = "AM" if hour < 12 else "PM"
-                arrives = f"{hour % 12 or 12}:{minute:02d} {ampm}"
-
                 status = entry.get("status") or "On Time"
                 unknown = False
                 if status == "On Time":
@@ -149,6 +135,24 @@ def parse_trains(data, direction_key, count=1):
                     # for a train, so it must not be shown as a real delay.
                     if delay >= UNKNOWN_DELAY:
                         delay, unknown = 0, True
+
+                # Drop a train only once it has actually gone, which means the
+                # delay counts. A train 10 minutes late is still 5 minutes away
+                # when its scheduled time was 5 minutes ago, and that is exactly
+                # the train a waiting passenger needs to see.
+                sched_dt = None
+                try:
+                    sched_dt = datetime.strptime(entry["sched_time"],
+                                                 "%Y-%m-%d %H:%M:%S.%f")
+                    if sched_dt + timedelta(minutes=delay) < now:
+                        continue
+                except (KeyError, ValueError):
+                    pass
+
+                sched = entry["sched_time"][11:16]
+                hour, minute = int(sched[:2]), int(sched[3:])
+                ampm = "AM" if hour < 12 else "PM"
+                arrives = f"{hour % 12 or 12}:{minute:02d} {ampm}"
 
                 trains.append({
                     "dest": dest,
@@ -407,6 +411,20 @@ def draw_block(draw, y0, heading, direction, train, track):
         draw_strip(draw, y0 + 37, direction, train, track)
 
 
+def to_framebuffer(canvas):
+    """A Pillow canvas turned into bytes these panels display correctly.
+
+    The transforms compensate for how this particular array is wired, so they
+    apply only on real hardware; the simulator shows the plain canvas.
+    """
+    arr = np.asarray(canvas).copy()
+    if HARDWARE:
+        arr = arr[:, :, ::-1]              # RGB -> BGR for the Active3 pinout
+        arr = reorder_rows(arr)
+        arr = np.flipud(np.fliplr(arr))
+    return np.ascontiguousarray(arr).copy()
+
+
 def render(state):
     canvas = Image.new("RGB", (WIDTH, HEIGHT), BLACK)
     draw = ImageDraw.Draw(canvas)
@@ -428,12 +446,7 @@ def render(state):
     draw_block(draw, 76, "TO MEDIA/WAWA", "S",
                state["southbound"][0], state["track_s"])
 
-    arr = np.asarray(canvas).copy()
-    if HARDWARE:
-        arr = arr[:, :, ::-1]              # RGB -> BGR for the Active3 pinout
-        arr = reorder_rows(arr)
-        arr = np.flipud(np.fliplr(arr))
-    return np.ascontiguousarray(arr).copy()
+    return to_framebuffer(canvas)
 
 
 # --------------------------------------------------------------------- main

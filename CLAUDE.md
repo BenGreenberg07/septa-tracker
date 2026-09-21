@@ -27,6 +27,10 @@ while and recovered in September 2026.
 - **`rpi5/TRACKING.md`** explains how the live train tracking works.
 - **`pi/`** holds the maintenance scripts. `pi/doctor.sh` is read-only and is
   almost always the right first command.
+- **`rpi5/tools/`** holds `panel-test.py` (dead pixel and wiring patterns) and
+  `api-check.py` (why the board shows what it shows). Run both through
+  `pi/try-script.sh` or the venv; neither needs the service stopped except
+  panel-test, which try-script handles.
 
 ## Traps that have already bitten this project
 
@@ -53,8 +57,8 @@ while and recovered in September 2026.
 
 - On the Pi: `pi/try-script.sh <file>` to test, `pi/set-panel-script.sh <file>`
   to set what runs at boot.
-- On a Mac: `./run-sim.sh` or `Start Panel.command` renders the board in a
-  browser at http://127.0.0.1:8800, no hardware needed.
+- On a Mac: `./run-sim.sh` renders the board in a browser at
+  http://127.0.0.1:8800, no hardware needed.
 - Flicker experiments: `SEPTA_PLANES` and `SEPTA_TEMPORAL_PLANES` env vars
   (defaults 4 and 2).
 
