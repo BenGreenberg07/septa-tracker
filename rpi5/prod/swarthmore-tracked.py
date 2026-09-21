@@ -64,11 +64,12 @@ ORANGE = (255, 128, 0)
 GREEN = (0, 255, 0)
 YELLOW = (255, 255, 0)
 GRAY = (180, 180, 180)
-DIM = (70, 74, 80)
-FAINT = (38, 41, 46)
+DIM = (125, 131, 140)
+FAINT = (85, 90, 98)
 
 # SEPTA reports this many minutes late when it has no status for a train.
 UNKNOWN_DELAY = 999
+TAIL_LEN = 20  # px of fading trail behind the train dot
 GARNET = (139, 0, 0)
 CYAN = (0, 200, 255)
 BLACK = (0, 0, 0)
@@ -263,6 +264,11 @@ def minutes_until(train):
     return int(max(0, round(mins)))
 
 
+def shade(color, f):
+    """color dimmed to fraction f, for tail and travelled-leg shading."""
+    return tuple(int(c * f) for c in color)
+
+
 def delay_color(minutes):
     if minutes <= 0:
         return GREEN
@@ -331,8 +337,16 @@ def draw_strip(draw, y, direction, train, track):
     frac = line.journey_fraction(track["pos"], origin, direction)
     # An unknown delay must not be drawn as an on-time green marker.
     color = GRAY if track.get("late_unknown") else delay_color(track["late"])
-    tx = x_org + (x_swat - x_org) * frac
-    draw.line([(x_org, y), (tx, y)], fill=color, width=1)
+    tx = int(round(x_org + (x_swat - x_org) * frac))
+
+    # The travelled leg stays lit so the run so far reads at a glance, and a
+    # short tail brightens into the dot so the direction of travel is obvious
+    # even when the train has barely left its origin.
+    if tx > x_org:
+        draw.line([(x_org, y), (tx, y)], fill=shade(color, 0.40), width=1)
+    for x in range(max(x_org, tx - TAIL_LEN), tx):
+        f = (x - (tx - TAIL_LEN)) / TAIL_LEN
+        draw.point((x, y), fill=shade(color, 0.35 + 0.65 * f))
     draw.ellipse([tx - 3, y - 3, tx + 3, y + 3], fill=color)
     draw.ellipse([tx - 1, y - 1, tx + 1, y + 1], fill=BLACK)
 
@@ -341,7 +355,7 @@ def status_text(track, train):
     if train["dest"] == "No trains":
         return "", DIM
     if not track:
-        return "SCHED", DIM
+        return "SCHED", GRAY
     if track["at_swat"]:
         return "ARRIVING", GREEN
     n = track["stops_away"]
