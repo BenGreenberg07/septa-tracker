@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Explain what the board is showing, and why there is or is not a train dot.
 
-    ./venv/bin/python rpi5/tools/api-check.py
+    ./pi/py.sh rpi5/tools/api-check.py     (on the Pi)
+    ./venv/bin/python rpi5/tools/api-check.py   (on a Mac)
 
 Uses the display's own fetching and matching code, so it tells you exactly what
 the board decided, not an approximation of it. Needs no panels, so it is safe

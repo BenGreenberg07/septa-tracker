@@ -29,8 +29,8 @@ while and recovered in September 2026.
   almost always the right first command.
 - **`rpi5/tools/`** holds `panel-test.py` (dead pixel and wiring patterns) and
   `api-check.py` (why the board shows what it shows). Run both through
-  `pi/try-script.sh` or the venv; neither needs the service stopped except
-  panel-test, which try-script handles.
+  `pi/try-script.sh` (panel-test, which needs the panels) or `pi/py.sh`
+  (api-check, which does not).
 
 ## Traps that have already bitten this project
 

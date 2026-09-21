@@ -286,7 +286,8 @@ Then run the three lines at the top of this section on the Pi.
 | `update.sh` | Pulls your latest code from GitHub and restarts | Yes |
 | `setup-remote.sh` | One-time SSH and Tailscale setup | Yes |
 | `../rpi5/tools/panel-test.py` | Dead pixel and wiring test patterns (run via `try-script.sh`) | No |
-| `../rpi5/tools/api-check.py` | Explains what the board is showing and why | No |
+| `py.sh <file>` | Runs a Python file with the right interpreter | No |
+| `../rpi5/tools/api-check.py` | Explains what the board is showing and why (run via `py.sh`) | No |
 
 **On your Mac**:
 
