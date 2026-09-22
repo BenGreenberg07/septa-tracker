@@ -24,6 +24,7 @@ while and recovered in September 2026.
 ## Read this before changing anything
 
 - **`LAB-GUIDE.md`** is the step-by-step operating guide. Start there.
+- **`COMMANDS.md`** is the command cheat sheet, Pi and SSH forms.
 - **`HARDWARE.md`** records confirmed hardware faults (under-voltage, heat,
   panel 14 red), the evidence for each, and what to buy.
 - **`rpi5/TRACKING.md`** explains how the live train tracking works.
