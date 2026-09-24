@@ -299,20 +299,18 @@ def fit_words(draw, text, font, max_w):
     return fit(draw, text, font, max_w)
 
 
-def stop_label(draw, name, max_w=64):
-    """A stop's name as the strip should print it.
+def stop_names(name):
+    """A stop's name spelled long and short, or ("", "") if it is not on the line.
 
     TrainView spells some stops its own way, so the name is put back through
-    the line table first; if the full name is too wide for the strip the
-    timetable short code is used instead.
+    the line table before either form is offered.
     """
     if not name:
-        return ""
+        return "", ""
     i = line.station_index(name)
     if i is None:
-        return ""
-    full, short = line.LINE[i][0], line.LINE[i][1]
-    return full if draw.textlength(full, font=FONT_TN) <= max_w else short
+        return "", ""
+    return line.LINE[i][0], line.LINE[i][1]
 
 
 def draw_strip(draw, y, direction, train, track):
@@ -358,31 +356,41 @@ def draw_strip(draw, y, direction, train, track):
     # read without counting stops. It is worked out before the fixed labels
     # are drawn, because a fixed label it would land on top of is dropped:
     # the live position is worth more than a rail end anyone can infer.
+    near, far = ("WAWA", "PENN") if flip else ("PENN", "WAWA")
+    nw = draw.textlength(near, font=FONT_TN)
+    sw = draw.textlength("SWAT", font=FONT_TN)
+    fw = draw.textlength(far, font=FONT_TN)
+    fixed = [
+        (2.0, nw, near, GRAY),
+        (x_swat - sw / 2, sw, "SWAT", YELLOW),
+        (WIDTH - 2 - fw, fw, far, GRAY),
+    ]
+
+    def hits(x0, w, x1, w1):
+        return x0 + w + 2 > x1 and x1 + w1 + 2 > x0
+
     here = ""
     here_x = 0.0
     here_w = 0.0
     if track:
         tx = x_of(track["pos"])
         if line.MAP_START <= track["pos"] <= line.MAP_END:
-            here = stop_label(draw, track.get("current"))
-        if here:
-            here_w = draw.textlength(here, font=FONT_TN)
-            here_x = min(max(2.0, tx - here_w / 2), WIDTH - 2 - here_w)
+            full, short = stop_names(track.get("current"))
+            # Spell it out when there is room, and fall back to the timetable
+            # short code rather than push a rail label off the strip.
+            for cand in (full, short):
+                if not cand:
+                    continue
+                w = draw.textlength(cand, font=FONT_TN)
+                x0 = min(max(2.0, tx - w / 2), WIDTH - 2 - w)
+                here, here_x, here_w = cand, x0, w
+                if not any(hits(x0, w, fx, fwd) for fx, fwd, _, _ in fixed):
+                    break
 
-    def clear_of_here(x0, w):
-        """True when a label at x0 does not run into the train's own."""
-        return not here or x0 + w + 2 <= here_x or x0 >= here_x + here_w + 2
-
-    near, far = ("WAWA", "PENN") if flip else ("PENN", "WAWA")
-    nw = draw.textlength(near, font=FONT_TN)
-    if clear_of_here(2, nw):
-        draw.text((2, label_y), near, font=FONT_TN, fill=GRAY)
-    sw = draw.textlength("SWAT", font=FONT_TN)
-    if clear_of_here(x_swat - sw / 2, sw):
-        draw.text((x_swat - sw / 2, label_y), "SWAT", font=FONT_TN, fill=YELLOW)
-    fw = draw.textlength(far, font=FONT_TN)
-    if clear_of_here(WIDTH - 2 - fw, fw):
-        draw.text((WIDTH - 2 - fw, label_y), far, font=FONT_TN, fill=GRAY)
+    for fx, fwd, text, fill in fixed:
+        if here and hits(here_x, here_w, fx, fwd):
+            continue
+        draw.text((fx, label_y), text, font=FONT_TN, fill=fill)
 
     if not track:
         return
