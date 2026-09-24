@@ -299,18 +299,18 @@ def fit_words(draw, text, font, max_w):
     return fit(draw, text, font, max_w)
 
 
-def stop_names(name):
-    """A stop's name spelled long and short, or ("", "") if it is not on the line.
+def stop_at(pos):
+    """The stop nearest a position on the line: index, long name, short name.
 
-    TrainView spells some stops its own way, so the name is put back through
-    the line table before either form is offered.
+    Taken from the position rather than TrainView's `currentstop`, which names
+    the last station the train actually called at. An express runs past stops
+    without calling, so `currentstop` can sit several stations behind the
+    train while the dot has moved on, and a label drawn from it would name a
+    place nowhere near its own marker.
     """
-    if not name:
-        return "", ""
-    i = line.station_index(name)
-    if i is None:
-        return "", ""
-    return line.LINE[i][0], line.LINE[i][1]
+    i = int(round(pos))
+    i = max(line.MAP_START, min(line.MAP_END, i))
+    return i, line.LINE[i][0], line.LINE[i][1]
 
 
 def draw_strip(draw, y, direction, train, track):
@@ -379,10 +379,9 @@ def draw_strip(draw, y, direction, train, track):
     if track:
         tx = x_of(track["pos"])
         if line.MAP_START <= track["pos"] <= line.MAP_END:
-            full, short = stop_names(track.get("current"))
-            at_i = line.station_index(track.get("current"))
+            at_i, full, short = stop_at(track["pos"])
             for fx, fwd, text, _, tag in fixed:
-                if at_i is not None and at_i == tag:
+                if at_i == tag:
                     # Standing on a rail end: colour that label rather than
                     # print the same stop's name twice, side by side.
                     taken, here, here_x, here_w = tag, text, fx, fwd
@@ -412,13 +411,17 @@ def draw_strip(draw, y, direction, train, track):
     # An unknown delay must not be drawn as an on-time green marker.
     color = GRAY if track.get("late_unknown") else delay_color(track["late"])
 
-    # Both maps run toward the destination, so every train moves left to
-    # right and the tail always trails off to the left.
+    # Both maps run toward the destination, so every train moves left to right.
+    # The whole stretch it has covered on this map stays lit, dimly, with the
+    # last stretch brightening into the dot: distance run at a glance, and
+    # direction of travel without having to read the labels.
+    if tx > x_left:
+        draw.line([(x_left, y), (tx, y)], fill=shade(color, 0.45), width=1)
     for k in range(1, TAIL_LEN):
         x = tx - k
-        if not (x_left <= x <= x_right):
+        if x < x_left:
             break
-        draw.point((x, y), fill=shade(color, 1.0 - k / TAIL_LEN))
+        draw.point((x, y), fill=shade(color, 1.0 - 0.55 * k / TAIL_LEN))
 
     draw.ellipse([tx - 3, y - 3, tx + 3, y + 3], fill=color)
     draw.ellipse([tx - 1, y - 1, tx + 1, y + 1], fill=BLACK)
