@@ -299,6 +299,22 @@ def fit_words(draw, text, font, max_w):
     return fit(draw, text, font, max_w)
 
 
+def stop_label(draw, name, max_w=64):
+    """A stop's name as the strip should print it.
+
+    TrainView spells some stops its own way, so the name is put back through
+    the line table first; if the full name is too wide for the strip the
+    timetable short code is used instead.
+    """
+    if not name:
+        return ""
+    i = line.station_index(name)
+    if i is None:
+        return ""
+    full, short = line.LINE[i][0], line.LINE[i][1]
+    return full if draw.textlength(full, font=FONT_TN) <= max_w else short
+
+
 def draw_strip(draw, y, direction, train, track):
     """A fixed map of the line: Penn Medicine at the left, Wawa at the right,
     Swarthmore marked between them, and a dot at every stop in between.
@@ -337,19 +353,42 @@ def draw_strip(draw, y, direction, train, track):
     draw.ellipse([x_swat - 1, y - 1, x_swat + 1, y + 1], fill=YELLOW)
 
     label_y = y + 4
+
+    # Where the train is gets named under its own dot, so the strip can be
+    # read without counting stops. It is worked out before the fixed labels
+    # are drawn, because a fixed label it would land on top of is dropped:
+    # the live position is worth more than a rail end anyone can infer.
+    here = ""
+    here_x = 0.0
+    here_w = 0.0
+    if track:
+        tx = x_of(track["pos"])
+        if line.MAP_START <= track["pos"] <= line.MAP_END:
+            here = stop_label(draw, track.get("current"))
+        if here:
+            here_w = draw.textlength(here, font=FONT_TN)
+            here_x = min(max(2.0, tx - here_w / 2), WIDTH - 2 - here_w)
+
+    def clear_of_here(x0, w):
+        """True when a label at x0 does not run into the train's own."""
+        return not here or x0 + w + 2 <= here_x or x0 >= here_x + here_w + 2
+
     near, far = ("WAWA", "PENN") if flip else ("PENN", "WAWA")
-    draw.text((2, label_y), near, font=FONT_TN, fill=GRAY)
+    nw = draw.textlength(near, font=FONT_TN)
+    if clear_of_here(2, nw):
+        draw.text((2, label_y), near, font=FONT_TN, fill=GRAY)
     sw = draw.textlength("SWAT", font=FONT_TN)
-    draw.text((x_swat - sw / 2, label_y), "SWAT", font=FONT_TN, fill=YELLOW)
+    if clear_of_here(x_swat - sw / 2, sw):
+        draw.text((x_swat - sw / 2, label_y), "SWAT", font=FONT_TN, fill=YELLOW)
     fw = draw.textlength(far, font=FONT_TN)
-    draw.text((WIDTH - 2 - fw, label_y), far, font=FONT_TN, fill=GRAY)
+    if clear_of_here(WIDTH - 2 - fw, fw):
+        draw.text((WIDTH - 2 - fw, label_y), far, font=FONT_TN, fill=GRAY)
 
     if not track:
         return
 
     # An unknown delay must not be drawn as an on-time green marker.
     color = GRAY if track.get("late_unknown") else delay_color(track["late"])
-    tx = x_of(track["pos"])
 
     # Both maps run toward the destination, so every train moves left to
     # right and the tail always trails off to the left.
@@ -361,6 +400,9 @@ def draw_strip(draw, y, direction, train, track):
 
     draw.ellipse([tx - 3, y - 3, tx + 3, y + 3], fill=color)
     draw.ellipse([tx - 1, y - 1, tx + 1, y + 1], fill=BLACK)
+
+    if here:
+        draw.text((here_x, label_y), here, font=FONT_TN, fill=color)
 
 
 def status_text(track, train):
