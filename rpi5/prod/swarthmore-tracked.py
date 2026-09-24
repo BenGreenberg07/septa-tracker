@@ -408,8 +408,13 @@ def draw_strip(draw, y, direction, train, track):
     if not track:
         return
 
-    # An unknown delay must not be drawn as an on-time green marker.
-    color = GRAY if track.get("late_unknown") else delay_color(track["late"])
+    # One train, one colour. The countdown and the delay chip are coloured
+    # from the Arrivals delay, so the marker is too: TrainView carries its own
+    # `late` and the two feeds disagree often enough that sourcing the marker
+    # separately put an orange countdown above a green dot. An unknown delay,
+    # from either feed, must not be drawn as an on-time green marker.
+    unknown = train.get("unknown") or track.get("late_unknown")
+    color = GRAY if unknown else delay_color(train["delay"])
 
     # Both maps run toward the destination, so every train moves left to right.
     # The whole stretch it has covered on this map stays lit, dimly, with the
