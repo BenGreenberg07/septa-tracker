@@ -360,10 +360,13 @@ def draw_strip(draw, y, direction, train, track):
     nw = draw.textlength(near, font=FONT_TN)
     sw = draw.textlength("SWAT", font=FONT_TN)
     fw = draw.textlength(far, font=FONT_TN)
+    # Each rail label is tagged with the stop it names, so a train standing on
+    # that stop can take the label over instead of printing beside it.
+    near_i, far_i = (line.MAP_END, line.MAP_START) if flip else (line.MAP_START, line.MAP_END)
     fixed = [
-        (2.0, nw, near, GRAY),
-        (x_swat - sw / 2, sw, "SWAT", YELLOW),
-        (WIDTH - 2 - fw, fw, far, GRAY),
+        (2.0, nw, near, GRAY, near_i),
+        (x_swat - sw / 2, sw, "SWAT", YELLOW, line.SWAT_IDX),
+        (WIDTH - 2 - fw, fw, far, GRAY, far_i),
     ]
 
     def hits(x0, w, x1, w1):
@@ -372,22 +375,33 @@ def draw_strip(draw, y, direction, train, track):
     here = ""
     here_x = 0.0
     here_w = 0.0
+    taken = None          # a rail label the train is standing on
     if track:
         tx = x_of(track["pos"])
         if line.MAP_START <= track["pos"] <= line.MAP_END:
             full, short = stop_names(track.get("current"))
-            # Spell it out when there is room, and fall back to the timetable
-            # short code rather than push a rail label off the strip.
-            for cand in (full, short):
-                if not cand:
-                    continue
-                w = draw.textlength(cand, font=FONT_TN)
-                x0 = min(max(2.0, tx - w / 2), WIDTH - 2 - w)
-                here, here_x, here_w = cand, x0, w
-                if not any(hits(x0, w, fx, fwd) for fx, fwd, _, _ in fixed):
+            at_i = line.station_index(track.get("current"))
+            for fx, fwd, text, _, tag in fixed:
+                if at_i is not None and at_i == tag:
+                    # Standing on a rail end: colour that label rather than
+                    # print the same stop's name twice, side by side.
+                    taken, here, here_x, here_w = tag, text, fx, fwd
                     break
+            else:
+                # Spell it out when there is room, and fall back to the
+                # timetable short code rather than push a rail label off.
+                for cand in (full, short):
+                    if not cand:
+                        continue
+                    w = draw.textlength(cand, font=FONT_TN)
+                    x0 = min(max(2.0, tx - w / 2), WIDTH - 2 - w)
+                    here, here_x, here_w = cand, x0, w
+                    if not any(hits(x0, w, fx, fwd) for fx, fwd, _, _, _ in fixed):
+                        break
 
-    for fx, fwd, text, fill in fixed:
+    for fx, fwd, text, fill, tag in fixed:
+        if taken == tag:
+            continue
         if here and hits(here_x, here_w, fx, fwd):
             continue
         draw.text((fx, label_y), text, font=FONT_TN, fill=fill)
