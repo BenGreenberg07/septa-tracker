@@ -121,7 +121,9 @@ def render_block(direction, tr, tk, heading):
     """Draw one direction block on a black canvas and return it as LED pixels."""
     canvas = Image.new("RGB", (D.WIDTH, BLOCK_H), D.BLACK)
     draw = ImageDraw.Draw(canvas)
-    D.draw_block(draw, 0, heading, direction, tr, tk)
+    # draw_block takes the run of upcoming trains; these scenarios each
+    # describe a single one, so it is passed as a one-train run.
+    D.draw_block(draw, 0, heading, direction, [tr], tk)
     return np.asarray(canvas).copy()
 
 

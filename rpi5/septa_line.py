@@ -160,16 +160,16 @@ def fetch_trainview(timeout=10):
     return out
 
 
-def track_train(train_id, trainview):
+def track_train(train_id, trainview, direction=None):
     """Live position info for one train id, or None if it isn't rolling yet.
 
     Returns dict with:
       pos       float index along LINE
       stops_away integer stations still to go before Swarthmore
+      departed  True once it has passed Swarthmore, so stops_away is 0
       current   name of the stop it most recently left / is at
       next      name of the stop it is heading for
       late      minutes late per the GPS feed
-      inbound   True if it is still approaching Swarthmore
     """
     tv = trainview.get(str(train_id))
     if not tv:
@@ -178,7 +178,18 @@ def track_train(train_id, trainview):
     if pos is None:
         return None
 
-    stops_away = int(math.ceil(abs(pos - SWAT_IDX) - 1e-9))
+    # Distance to Swarthmore signed by travel: a Center City train runs down
+    # the indices and a Media/Wawa one runs up them, so the sign says whether
+    # Swarthmore is still ahead. Unsigned, a train pulling away from the
+    # platform counted its stops back up again as though it were approaching.
+    if direction == "N":
+        to_swat = pos - SWAT_IDX
+    elif direction == "S":
+        to_swat = SWAT_IDX - pos
+    else:
+        to_swat = abs(pos - SWAT_IDX)
+    departed = to_swat < -1e-9
+    stops_away = 0 if departed else int(math.ceil(to_swat - 1e-9))
     try:
         late = int(tv.get("late") or 0)
     except (TypeError, ValueError):
@@ -191,12 +202,13 @@ def track_train(train_id, trainview):
     return {
         "pos": pos,
         "stops_away": stops_away,
+        "departed": departed,
         "current": tv.get("currentstop") or "",
         "next": tv.get("nextstop") or "",
         "late": late,
         "late_unknown": late_unknown,
         "dest": tv.get("dest") or "",
-        "at_swat": stops_away == 0,
+        "at_swat": not departed and stops_away == 0,
     }
 
 

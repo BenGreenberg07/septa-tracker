@@ -45,8 +45,12 @@ for num, t in sorted(mw.items()):
 
 for direction, label in (("N", "TO CENTER CITY"), ("S", "TO MEDIA/WAWA")):
     print(f"\n{'=' * 60}\n{label}")
-    trains = D.fetch_trains(direction)
+    trains, feed_time = D.fetch_trains(direction)
     t = trains[0]
+    if feed_time:
+        skew = (datetime.now() - feed_time).total_seconds()
+        print(f"  Feed clock  : {feed_time:%-I:%M %p}, this machine is "
+              f"{skew:+.0f}s from it")
     print(f"  Board shows : {t['origin'] or '?'} -> {t['dest']} at {t['arrives']}"
           f"  (train id {t['train_id'] or 'none'})")
     if t.get("unknown"):
@@ -57,10 +61,14 @@ for direction, label in (("N", "TO CENTER CITY"), ("S", "TO MEDIA/WAWA")):
     if not t["train_id"]:
         print("  Dot         : no, there is no train to show")
         continue
-    track = line.track_train(t["train_id"], tv)
+    track = line.track_train(t["train_id"], tv, direction)
     if track:
-        print(f"  Dot         : YES, {track['stops_away']} stop(s) away, "
-              f"between {track['current']} and {track['next']}")
+        if track["departed"]:
+            print(f"  Dot         : YES, but it has already left Swarthmore, "
+                  f"between {track['current']} and {track['next']}")
+        else:
+            print(f"  Dot         : YES, {track['stops_away']} stop(s) away, "
+                  f"between {track['current']} and {track['next']}")
     else:
         print(f"  Dot         : no, because train {t['train_id']} has no live GPS record")
         print("                This is correct if it has not started its run yet.")

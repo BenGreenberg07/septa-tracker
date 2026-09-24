@@ -14,6 +14,8 @@ import os
 import sys
 import threading
 import time
+import re
+import html
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -70,7 +72,7 @@ FAINT = (85, 90, 98)
 # SEPTA reports this many minutes late when it has no status for a train.
 UNKNOWN_DELAY = 999
 TAIL_LEN = 20  # px of fading trail behind the train dot
-GARNET = (139, 0, 0)
+GARNET = (198, 26, 48)   # Swarthmore garnet, lifted: (139,0,0) barely lights an LED
 CYAN = (0, 200, 255)
 BLACK = (0, 0, 0)
 
@@ -90,15 +92,82 @@ FONT_TN = _font(FONT_TINY)
 
 # ---------------------------------------------------------------- SEPTA data
 
-def fetch_trains(direction):
+ALERTS_URL = ("https://www3.septa.org/api/Alerts/get_alert_data.php"
+              "?req1=rr_route_med")
+
+# How stale the data may get before the board stops presenting it as current.
+STALE_AFTER = 180        # seconds
+# How far the Pi's clock may drift from SEPTA's before the countdowns are
+# untrustworthy. A Pi 5 has no battery-backed clock, so a boot without NTP
+# starts it at whatever time it last shut down.
+CLOCK_SKEW_LIMIT = 120   # seconds
+# How long one page of a service alert holds before the next replaces it.
+ALERT_PAGE_SECS = 4
+
+
+def fetch_trains(direction, count=2):
+    """The next `count` trains one way. Raises if the feed cannot be read.
+
+    Errors are deliberately not swallowed into an empty result: "no trains"
+    and "could not ask" look identical on a board but mean opposite things to
+    someone standing on the platform.
+    """
     key = "Northbound" if direction == "N" else "Southbound"
-    try:
-        url = ("https://www3.septa.org/api/Arrivals/index.php"
-               f"?station=Swarthmore&results=20&direction={direction}")
-        return parse_trains(requests.get(url, timeout=10).json(), key)
-    except Exception as e:
-        print(f"API error ({direction}): {e}")
-        return no_trains()
+    url = ("https://www3.septa.org/api/Arrivals/index.php"
+           f"?station=Swarthmore&results=20&direction={direction}")
+    data = requests.get(url, timeout=10).json()
+    return parse_trains(data, key, count=count), parse_feed_time(data)
+
+
+def parse_feed_time(data):
+    """The timestamp SEPTA stamps its own response with, or None.
+
+    The key reads "Swarthmore Departures: September 24, 2026, 5:32 pm". It is
+    the only clock in reach that does not come from this Pi, so it is what the
+    local clock gets checked against.
+    """
+    for key in data:
+        if "Departures:" not in key:
+            continue
+        stamp = key.split("Departures:", 1)[1].strip()
+        for fmt in ("%B %d, %Y, %I:%M %p", "%B %d, %Y, %I:%M%p"):
+            try:
+                return datetime.strptime(stamp, fmt)
+            except ValueError:
+                continue
+    return None
+
+
+def fetch_alert():
+    """Any live service message for the Media/Wawa line, or "".
+
+    The per-route endpoint is a few hundred bytes, where the full alert index
+    is over 150 KB; at one call per refresh that difference matters.
+    """
+    data = requests.get(ALERTS_URL, timeout=10).json()
+    if not isinstance(data, list) or not data:
+        return ""
+    row = data[0]
+    if not isinstance(row, dict) or row.get("Error"):
+        return ""
+    for field in ("current_message", "detour_message", "advisory_message"):
+        msg = clean_alert(row.get(field))
+        if msg:
+            return msg
+    return ""
+
+
+_TAG_RE = re.compile(r"<[^>]+>")
+_WS_RE = re.compile(r"\s+")
+
+
+def clean_alert(msg):
+    """SEPTA's alert text as one line: it arrives as HTML with entities."""
+    if not msg:
+        return ""
+    text = _TAG_RE.sub(" ", str(msg))
+    text = html.unescape(text)
+    return _WS_RE.sub(" ", text).strip()
 
 
 def parse_trains(data, direction_key, count=1):
@@ -440,13 +509,65 @@ def status_text(track, train):
         return "", DIM
     if not track:
         return "SCHED", GRAY
+    if track.get("departed"):
+        return "DEPARTED", DIM
     if track["at_swat"]:
         return "ARRIVING", GREEN
     n = track["stops_away"]
     return (f"{n} STOP" if n == 1 else f"{n} STOPS"), CYAN
 
 
-def draw_block(draw, y0, heading, direction, train, track):
+def pages(draw, text, font, max_w):
+    """Split text into whole-word pages that each fit max_w."""
+    out, cur = [], ""
+    for word in text.split():
+        trial = f"{cur} {word}".strip()
+        if cur and draw.textlength(trial, font=font) > max_w:
+            out.append(cur)
+            cur = fit(draw, word, font, max_w)
+        else:
+            cur = trial
+    if cur:
+        out.append(cur)
+    return out
+
+
+def header_status(draw, st, badge_w, full_w):
+    """What the header should say, in what colour, and how much room it takes.
+
+    Ordered by how badly each undermines the rest of the board. Stale data
+    outranks everything: if the feed is old then the alert is old too, and the
+    times beneath are the ones actually misleading someone. A drifting clock
+    comes next, since every countdown is computed from it.
+
+    Returns (text, colour, font, wide). A wide result is given the whole
+    header: the line name and the logo are decoration, and a service message
+    is the one thing on this board a rider cannot work out for themselves.
+    """
+    age = time.time() - st.get("last_ok", 0.0)
+    if not st.get("last_ok"):
+        return "NO DATA YET", RED, FONT_TN, False
+    if age > STALE_AFTER:
+        mins = int(age // 60)
+        return (f"DATA {mins} MIN OLD" if mins else "DATA STALE"), RED, FONT_TN, False
+    if abs(st.get("clock_skew", 0.0)) > CLOCK_SKEW_LIMIT:
+        return "CLOCK OFF", RED, FONT_TN, False
+
+    alert = st.get("alert") or ""
+    if alert:
+        chunks = pages(draw, alert, FONT_TN, full_w)
+        if chunks:
+            # Paged rather than scrolled: the panel is redrawn once a second,
+            # and a ticker stepping a whole second at a time reads worse than
+            # text that simply holds still long enough to be read. Paged from
+            # when the message arrived, so a reader meets it at its first word
+            # rather than wherever the wall clock happens to be.
+            elapsed = time.time() - (st.get("alert_since") or 0.0)
+            return chunks[int(elapsed // ALERT_PAGE_SECS) % len(chunks)], ORANGE, FONT_TN, True
+    return "SWAT ENGR", GARNET, FONT_MD, False
+
+
+def draw_block(draw, y0, heading, direction, trains, track):
     """One direction: where it goes, when it gets here, and where it is now.
 
     The terminus deliberately does not get the big line. Every northbound
@@ -455,6 +576,8 @@ def draw_block(draw, y0, heading, direction, train, track):
     direction gets the large type, the countdown gets the other half of it,
     and the terminus survives as the strip's right-hand anchor.
     """
+    train = trains[0]
+    later = trains[1] if len(trains) > 1 else None
     no_train = train["dest"] == "No trains"
 
     # Line 1: direction, large, with the countdown opposite it.
@@ -474,17 +597,34 @@ def draw_block(draw, y0, heading, direction, train, track):
         draw.text((2, y0 + 19), train["arrives"], font=FONT_SM, fill=WHITE)
         x = 2 + draw.textlength(train["arrives"], font=FONT_SM) + 6
         if train.get("unknown"):
-            draw.text((x, y0 + 22), "NO STATUS", font=FONT_TN, fill=GRAY)
+            chip, chip_fill = "NO STATUS", GRAY
         elif train["delay"] > 0:
-            chip = f"+{train['delay']} MIN LATE"
-            draw.text((x, y0 + 22), chip, font=FONT_TN, fill=delay_color(train["delay"]))
+            chip, chip_fill = f"+{train['delay']} MIN LATE", delay_color(train["delay"])
         else:
-            draw.text((x, y0 + 22), "ON TIME", font=FONT_TN, fill=GREEN)
+            chip, chip_fill = "ON TIME", GREEN
+        draw.text((x, y0 + 22), chip, font=FONT_TN, fill=chip_fill)
+        chip_end = x + draw.textlength(chip, font=FONT_TN)
 
         stat, stat_color = status_text(track, train)
+        sw = 0.0
         if stat:
             sw = draw.textlength(stat, font=FONT_TN)
             draw.text((WIDTH - 3 - sw, y0 + 22), stat, font=FONT_TN, fill=stat_color)
+
+        # The one after, for anyone who has just watched a train leave. It
+        # gets the time only: a second countdown competing with the first
+        # would flatten the distinction the big type is there to make.
+        if later and later["dest"] != "No trains":
+            when = later["arrives"].rsplit(" ", 1)[0]
+            head_w = draw.textlength("THEN ", font=FONT_TN)
+            when_w = draw.textlength(when, font=FONT_TN)
+            right = WIDTH - 3 - sw - (8 if stat else 0)
+            left = right - head_w - when_w
+            if left > chip_end + 8:   # only when it does not crowd the chip
+                draw.text((left, y0 + 22), "THEN", font=FONT_TN, fill=DIM)
+                draw.text((left + head_w, y0 + 22), when, font=FONT_TN,
+                          fill=GRAY if later.get("unknown")
+                          else delay_color(later["delay"]))
 
     # With no train to relate it to, a bare rail of stops is just noise.
     if train.get("train_id") or track:
@@ -510,21 +650,34 @@ def render(state):
     draw = ImageDraw.Draw(canvas)
 
     # Header
-    draw.text((3, 2), "[MED]", font=FONT_SM, fill=YELLOW)
     text_w = int(draw.textlength("[MED]", font=FONT_SM))
-    canvas.paste(septa_logo, (text_w + 10, 2))
     swat_x = text_w + 10 + septa_logo.width + 6
-    draw.text((swat_x, 1), "SWAT ENGR", font=FONT_MD, fill=GARNET)
     now = datetime.now().strftime("%I:%M %p")
     tw = int(draw.textlength(now, font=FONT_SM))
-    draw.text((WIDTH - tw - 3, 2), now, font=FONT_SM, fill=WHITE)
+
+    text, fill, font, wide = header_status(
+        draw, state, (WIDTH - tw - 6) - swat_x, (WIDTH - tw - 6) - 3)
+
+    if not wide:
+        draw.text((3, 2), "[MED]", font=FONT_SM, fill=YELLOW)
+        canvas.paste(septa_logo, (text_w + 10, 2))
+
+    # The clock is the one thing on the board that is never not shown, so it
+    # is also where a clock the board cannot trust has to be admitted.
+    skewed = abs(state.get("clock_skew", 0.0)) > CLOCK_SKEW_LIMIT
+    draw.text((WIDTH - tw - 3, 2), now, font=FONT_SM,
+              fill=RED if skewed else WHITE)
+
+    draw.text((3 if wide else swat_x, 1 if font is FONT_MD else 3),
+              text, font=font, fill=fill)
+
     draw.line([(0, 20), (WIDTH, 20)], fill=GRAY, width=1)
 
     draw_block(draw, 22, "TO CENTER CITY", "N",
-               state["northbound"][0], state["track_n"])
+               state["northbound"], state["track_n"])
     draw.line([(0, 73), (WIDTH, 73)], fill=GRAY, width=1)
     draw_block(draw, 76, "TO MEDIA/WAWA", "S",
-               state["southbound"][0], state["track_s"])
+               state["southbound"], state["track_s"])
 
     return to_framebuffer(canvas)
 
@@ -539,19 +692,42 @@ state = {
     "track_n": None,
     "track_s": None,
     "fetching": False,
+    "last_ok": 0.0,       # time.time() of the last complete refresh
+    "clock_skew": 0.0,    # this Pi's clock minus SEPTA's, in seconds
+    "alert": "",          # live Media/Wawa service message, if any
+    "alert_since": 0.0,   # when that message first appeared, so it pages from its start
 }
 
 
 def refresh():
     state["fetching"] = True
     try:
-        nb = fetch_trains("N")
-        sb = fetch_trains("S")
+        nb, feed_time = fetch_trains("N")
+        sb, _ = fetch_trains("S")
         tv = line.fetch_trainview()
+
         state["northbound"] = nb
         state["southbound"] = sb
-        state["track_n"] = line.track_train(nb[0]["train_id"], tv) if nb[0]["train_id"] else None
-        state["track_s"] = line.track_train(sb[0]["train_id"], tv) if sb[0]["train_id"] else None
+        state["track_n"] = (line.track_train(nb[0]["train_id"], tv, "N")
+                            if nb[0]["train_id"] else None)
+        state["track_s"] = (line.track_train(sb[0]["train_id"], tv, "S")
+                            if sb[0]["train_id"] else None)
+        state["last_ok"] = time.time()
+        state["clock_skew"] = ((datetime.now() - feed_time).total_seconds()
+                               if feed_time else 0.0)
+    except Exception as e:
+        # The last good data is kept rather than blanked: render() marks it
+        # stale once it is too old, which is more use than an empty board.
+        print(f"Refresh failed: {e}")
+    else:
+        # Alerts are secondary; losing them must not cost a good train fetch.
+        try:
+            alert = fetch_alert()
+            if alert != state["alert"]:
+                state["alert"] = alert
+                state["alert_since"] = time.time()
+        except Exception as e:
+            print(f"Alert fetch failed: {e}")
     finally:
         state["fetching"] = False
 
