@@ -310,8 +310,16 @@ def draw_strip(draw, y, direction, train, track):
     """
     x_left, x_right = 14, WIDTH - 14
 
+    # Each strip runs toward its own destination, so both read left to right
+    # and the right-hand end always matches the heading above it. That means
+    # the Center City map is the line drawn backwards, Wawa end first.
+    flip = direction == "N"
+
     def x_of(pos):
-        return int(round(x_left + (x_right - x_left) * line.map_fraction(pos)))
+        f = line.map_fraction(pos)
+        if flip:
+            f = 1.0 - f
+        return int(round(x_left + (x_right - x_left) * f))
 
     x_swat = x_of(line.SWAT_IDX)
 
@@ -329,11 +337,12 @@ def draw_strip(draw, y, direction, train, track):
     draw.ellipse([x_swat - 1, y - 1, x_swat + 1, y + 1], fill=YELLOW)
 
     label_y = y + 4
-    draw.text((2, label_y), "PENN", font=FONT_TN, fill=GRAY)
+    near, far = ("WAWA", "PENN") if flip else ("PENN", "WAWA")
+    draw.text((2, label_y), near, font=FONT_TN, fill=GRAY)
     sw = draw.textlength("SWAT", font=FONT_TN)
     draw.text((x_swat - sw / 2, label_y), "SWAT", font=FONT_TN, fill=YELLOW)
-    ww = draw.textlength("WAWA", font=FONT_TN)
-    draw.text((WIDTH - 2 - ww, label_y), "WAWA", font=FONT_TN, fill=GRAY)
+    fw = draw.textlength(far, font=FONT_TN)
+    draw.text((WIDTH - 2 - fw, label_y), far, font=FONT_TN, fill=GRAY)
 
     if not track:
         return
@@ -342,11 +351,10 @@ def draw_strip(draw, y, direction, train, track):
     color = GRAY if track.get("late_unknown") else delay_color(track["late"])
     tx = x_of(track["pos"])
 
-    # The tail points back the way the train came: a Center City train runs
-    # right to left across this map, a Media/Wawa one left to right.
-    step = 1 if direction == "N" else -1
+    # Both maps run toward the destination, so every train moves left to
+    # right and the tail always trails off to the left.
     for k in range(1, TAIL_LEN):
-        x = tx + step * k
+        x = tx - k
         if not (x_left <= x <= x_right):
             break
         draw.point((x, y), fill=shade(color, 1.0 - k / TAIL_LEN))
