@@ -300,57 +300,57 @@ def fit_words(draw, text, font, max_w):
 
 
 def draw_strip(draw, y, direction, train, track):
-    """The journey strip: where the train started, where it is, Swarthmore,
-    and where it ends up.
+    """A fixed map of the line: Penn Medicine at the left, Wawa at the right,
+    Swarthmore marked between them, and a dot at every stop in between.
 
-    Four anchors rather than a rolling window of stops, so the whole run reads
-    at a glance: origin on the left, terminus on the right, Swarthmore fixed
-    between them, and the train sliding along the approach.
+    The span deliberately does not follow the train. Anchoring the right-hand
+    end on each train's own terminus made the picture rearrange itself between
+    arrivals, and for a through-running train it named a station on another
+    line entirely. A platform map that stays put can be read at a glance.
     """
-    x_org, x_swat, x_dest = 14, 150, WIDTH - 14
-    origin = train.get("origin") or ""
-    dest = train.get("dest") or ""
+    x_left, x_right = 14, WIDTH - 14
 
-    # The approach to Swarthmore is what riders here care about, so the leg
-    # beyond the platform is drawn fainter.
-    draw.line([(x_org, y), (x_swat, y)], fill=DIM, width=1)
-    draw.line([(x_swat, y), (x_dest, y)], fill=FAINT, width=1)
+    def x_of(pos):
+        return int(round(x_left + (x_right - x_left) * line.map_fraction(pos)))
 
-    draw.ellipse([x_org - 2, y - 2, x_org + 2, y + 2], outline=GRAY, fill=BLACK)
-    draw.ellipse([x_dest - 2, y - 2, x_dest + 2, y + 2], outline=GRAY, fill=BLACK)
+    x_swat = x_of(line.SWAT_IDX)
+
+    draw.line([(x_left, y), (x_right, y)], fill=DIM, width=1)
+
+    # One dot per station, so the stops still to go can be counted off.
+    for i in line.map_stops():
+        if i == line.SWAT_IDX:
+            continue
+        x = x_of(i)
+        draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=GRAY)
+
+    # Swarthmore is the stop that matters on this platform, so it gets the ring.
     draw.ellipse([x_swat - 3, y - 3, x_swat + 3, y + 3], outline=YELLOW, fill=BLACK)
     draw.ellipse([x_swat - 1, y - 1, x_swat + 1, y + 1], fill=YELLOW)
 
     label_y = y + 4
+    draw.text((2, label_y), "PENN", font=FONT_TN, fill=GRAY)
     sw = draw.textlength("SWAT", font=FONT_TN)
-    gutter = 6
-
-    left = fit_words(draw, origin, FONT_TN, (x_swat - sw / 2 - gutter) - 2)
-    draw.text((2, label_y), left, font=FONT_TN, fill=GRAY)
-
     draw.text((x_swat - sw / 2, label_y), "SWAT", font=FONT_TN, fill=YELLOW)
-
-    right = fit_words(draw, dest, FONT_TN,
-                      (WIDTH - 2) - (x_swat + sw / 2 + gutter))
-    rw = draw.textlength(right, font=FONT_TN)
-    draw.text((WIDTH - 2 - rw, label_y), right, font=FONT_TN, fill=GRAY)
+    ww = draw.textlength("WAWA", font=FONT_TN)
+    draw.text((WIDTH - 2 - ww, label_y), "WAWA", font=FONT_TN, fill=GRAY)
 
     if not track:
         return
 
-    frac = line.journey_fraction(track["pos"], origin, direction)
     # An unknown delay must not be drawn as an on-time green marker.
     color = GRAY if track.get("late_unknown") else delay_color(track["late"])
-    tx = int(round(x_org + (x_swat - x_org) * frac))
+    tx = x_of(track["pos"])
 
-    # The travelled leg stays lit so the run so far reads at a glance, and a
-    # short tail brightens into the dot so the direction of travel is obvious
-    # even when the train has barely left its origin.
-    if tx > x_org:
-        draw.line([(x_org, y), (tx, y)], fill=shade(color, 0.40), width=1)
-    for x in range(max(x_org, tx - TAIL_LEN), tx):
-        f = (x - (tx - TAIL_LEN)) / TAIL_LEN
-        draw.point((x, y), fill=shade(color, 0.35 + 0.65 * f))
+    # The tail points back the way the train came: a Center City train runs
+    # right to left across this map, a Media/Wawa one left to right.
+    step = 1 if direction == "N" else -1
+    for k in range(1, TAIL_LEN):
+        x = tx + step * k
+        if not (x_left <= x <= x_right):
+            break
+        draw.point((x, y), fill=shade(color, 1.0 - k / TAIL_LEN))
+
     draw.ellipse([tx - 3, y - 3, tx + 3, y + 3], fill=color)
     draw.ellipse([tx - 1, y - 1, tx + 1, y + 1], fill=BLACK)
 

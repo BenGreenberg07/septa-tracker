@@ -226,6 +226,27 @@ def journey_start_index(origin_name, direction):
     return 0 if direction == "S" else len(LINE) - 1
 
 
+# The strip is a fixed map of the line rather than a per-train window: the
+# same stretch is drawn whoever is coming, so the picture on the platform does
+# not rearrange itself between trains.
+PENN_IDX = _INDEX["Penn Medicine Station"]
+MAP_START = PENN_IDX
+MAP_END = len(LINE) - 1          # Wawa
+
+
+def map_fraction(pos):
+    """Where a line position sits on the fixed strip: 0.0 Penn Med, 1.0 Wawa."""
+    span = MAP_END - MAP_START
+    if span == 0:
+        return 0.0
+    return max(0.0, min(1.0, (pos - MAP_START) / span))
+
+
+def map_stops():
+    """Indices of every stop drawn on the fixed strip, Penn Med to Wawa."""
+    return list(range(MAP_START, MAP_END + 1))
+
+
 def journey_fraction(pos, origin_name, direction):
     """How far the train has come: 0.0 at its origin, 1.0 at Swarthmore.
 
