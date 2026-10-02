@@ -34,6 +34,7 @@ RPI5 = os.path.dirname(HERE)
 sys.path.insert(0, RPI5)
 
 import septa_line as line
+import pixelfont
 
 try:
     import adafruit_blinka_raspberry_pi5_piomatter as piomatter
@@ -101,7 +102,9 @@ def _font(size):
 FONT_LG = _font(FONT_LARGE)
 FONT_MD = _font(FONT_MEDIUM)
 FONT_SM = _font(FONT_SMALL)
-FONT_TN = _font(FONT_TINY)
+# The small text is a 5x7 LED matrix font rather than 9 px DejaVu: on the
+# panels antialiased strokes that small turn into half-lit smears.
+FONT_TN = pixelfont.load()
 
 
 # ---------------------------------------------------------------- SEPTA data
@@ -225,6 +228,11 @@ _WS_RE = re.compile(r"\s+")
 _SPACE_BEFORE_PUNCT_RE = re.compile(r"\s+([.,;:!?)\]])")
 _SPACE_AFTER_OPEN_RE = re.compile(r"([(\[])\s+")
 _DOUBLE_PUNCT_RE = re.compile(r"([.:!?])\s*:")
+# Typographic characters folded to what the panel's bitmap font can draw.
+_ASCII_FOLD = str.maketrans({
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+    "\u2013": "-", "\u2014": "-", "\u2022": "*", "\u2026": "...",
+})
 
 
 def clean_alert(msg):
@@ -235,6 +243,7 @@ def clean_alert(msg):
     text = _BLOCK_RE.sub(" ", text)
     text = _TAG_RE.sub("", text)
     text = html.unescape(text)            # &nbsp; becomes \xa0, which \s covers
+    text = text.translate(_ASCII_FOLD)
     text = _WS_RE.sub(" ", text)
     text = _SPACE_BEFORE_PUNCT_RE.sub(r"\1", text)
     text = _SPACE_AFTER_OPEN_RE.sub(r"\1", text)
