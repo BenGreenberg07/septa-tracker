@@ -53,6 +53,15 @@ N_LANES = 4  # 2 HUB75 ports x 2 lanes each
 N_PLANES = int(os.environ.get("SEPTA_PLANES", 4))
 N_TEMPORAL_PLANES = int(os.environ.get("SEPTA_TEMPORAL_PLANES", 2))
 
+# Overnight the board drops to a fraction of its brightness: no one is waiting,
+# the panels draw far less current, and the Pi (which has no fan) runs cooler.
+# It stays bright whenever a train is due soon, so a late last train or an
+# early first one is never shown dimmed. Override, for example:
+#   SEPTA_QUIET_HOURS=01:00-05:30 SEPTA_QUIET_LEVEL=0.15
+QUIET_HOURS = os.environ.get("SEPTA_QUIET_HOURS", "00:30-05:00")
+QUIET_LEVEL = float(os.environ.get("SEPTA_QUIET_LEVEL", 0.25))
+QUIET_UNLESS_DUE = 20    # minutes: a train this close keeps the board bright
+
 FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
     "/opt/homebrew/lib/python3.14/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSansMono-Bold.ttf",
@@ -753,6 +762,37 @@ def render(state):
     return to_framebuffer(canvas)
 
 
+def _hhmm(text):
+    h, m = text.strip().split(":")
+    return int(h) * 60 + int(m)
+
+
+def is_quiet(st, now=None):
+    """True when the board should be dimmed: inside the quiet hours, with no
+    train due in either direction for a while."""
+    now = now or local_now()
+    try:
+        start, end = (_hhmm(t) for t in QUIET_HOURS.split("-"))
+    except ValueError:
+        return False                       # a malformed setting never dims
+    t = now.hour * 60 + now.minute
+    inside = start <= t < end if start <= end else (t >= start or t < end)
+    if not inside:
+        return False
+    for key in ("northbound", "southbound"):
+        for train in st.get(key) or []:
+            mins = minutes_until(train)
+            if mins is not None and mins <= QUIET_UNLESS_DUE:
+                return False
+    return True
+
+
+def dimmed(frame, level):
+    """A framebuffer at a fraction of its brightness. Scaling the values cuts
+    each LED's on-time, which is what saves power and heat."""
+    return (frame.astype(np.float32) * level).astype(np.uint8)
+
+
 # --------------------------------------------------------------------- main
 
 # A refresh that has been running this long is stuck (each request has its
@@ -887,7 +927,10 @@ def main(render=render):
             if now - last_fetch > state["retry_in"] and not state["fetching"]:
                 threading.Thread(target=refresh, daemon=True).start()
                 last_fetch = now
-            framebuffer[:] = render(state)
+            frame = render(state)
+            if is_quiet(state):
+                frame = dimmed(frame, QUIET_LEVEL)
+            framebuffer[:] = frame
             matrix.show()
             # Pinged from here, after a frame really went out, so a hang
             # anywhere in drawing or the panel driver stops the pings. A
