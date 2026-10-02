@@ -13,6 +13,46 @@ import requests
 
 TRAINVIEW_URL = "https://www3.septa.org/api/TrainView/index.php"
 
+# Says who is asking, so SEPTA can tell this board apart from a scraper and
+# has somewhere to look if it ever needs to ask us to change something.
+USER_AGENT = ("septa-tracker/1.0 (Swarthmore station departure board; "
+              "+https://github.com/BenGreenberg07/septa-tracker)")
+
+_session = requests.Session()
+_session.headers["User-Agent"] = USER_AGENT
+
+
+class Throttled(Exception):
+    """SEPTA refused the request (429 or 403): we are asking too often.
+
+    Kept distinct from timeouts and connection errors, which only mean the
+    network is having a bad moment. A refusal means slow down, and retrying at
+    the normal pace is how a soft throttle becomes an IP block.
+    """
+
+    def __init__(self, status, retry_after=None):
+        super().__init__(f"HTTP {status}"
+                         + (f", retry after {retry_after}s" if retry_after else ""))
+        self.status = status
+        self.retry_after = retry_after
+
+
+def get_json(url, timeout=10):
+    """GET a SEPTA endpoint and decode it. Raises Throttled on 429/403.
+
+    One shared session, so the connection is reused between refreshes rather
+    than paying for a fresh TLS handshake on every call.
+    """
+    r = _session.get(url, timeout=timeout)
+    if r.status_code in (403, 429):
+        try:
+            retry_after = int(r.headers.get("Retry-After", ""))
+        except ValueError:
+            retry_after = None
+        raise Throttled(r.status_code, retry_after)
+    r.raise_for_status()
+    return r.json()
+
 # Media/Wawa line, ordered north (Center City) -> south (Wawa).
 # (canonical name, short label for the strip, lat, lon)
 LINE = [
@@ -148,7 +188,9 @@ def locate_train(tv):
 def fetch_trainview(timeout=10):
     """All active regional-rail trains, keyed by train number (string)."""
     try:
-        data = requests.get(TRAINVIEW_URL, timeout=timeout).json()
+        data = get_json(TRAINVIEW_URL, timeout=timeout)
+    except Throttled:
+        raise      # a refusal has to reach the backoff, not become "no trains"
     except Exception as e:
         print(f"TrainView error: {e}")
         return {}

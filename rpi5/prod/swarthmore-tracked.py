@@ -22,7 +22,6 @@ import numpy as np
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
-import requests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RPI5 = os.path.dirname(HERE)
@@ -92,8 +91,19 @@ FONT_TN = _font(FONT_TINY)
 
 # ---------------------------------------------------------------- SEPTA data
 
+# No `direction=`: one call returns both the Northbound and Southbound lists,
+# and parse_trains() picks a direction by key, so asking twice was redundant.
+ARRIVALS_URL = ("https://www3.septa.org/api/Arrivals/index.php"
+                "?station=Swarthmore&results=20")
 ALERTS_URL = ("https://www3.septa.org/api/Alerts/get_alert_data.php"
               "?req1=rr_route_med")
+
+# How often to ask SEPTA, and how far to back off when asking fails. Each
+# failure doubles the wait up to the cap; a success drops straight back. A
+# refusal (429/403) goes straight to the cap, or longer if SEPTA says so.
+REFRESH_SECS = 30
+BACKOFF_MAX = 300
+THROTTLE_MAX = 3600      # ignore a Retry-After longer than an hour
 
 # How stale the data may get before the board stops presenting it as current.
 STALE_AFTER = 180        # seconds
@@ -105,17 +115,24 @@ CLOCK_SKEW_LIMIT = 120   # seconds
 ALERT_PAGE_SECS = 4
 
 
-def fetch_trains(direction, count=2):
+def fetch_arrivals():
+    """SEPTA's Arrivals response for Swarthmore, both directions at once."""
+    return line.get_json(ARRIVALS_URL)
+
+
+def fetch_trains(direction, count=2, data=None):
     """The next `count` trains one way. Raises if the feed cannot be read.
+
+    Pass `data` from fetch_arrivals() to read both directions out of a single
+    request; without it this fetches on its own, which is what the tools do.
 
     Errors are deliberately not swallowed into an empty result: "no trains"
     and "could not ask" look identical on a board but mean opposite things to
     someone standing on the platform.
     """
     key = "Northbound" if direction == "N" else "Southbound"
-    url = ("https://www3.septa.org/api/Arrivals/index.php"
-           f"?station=Swarthmore&results=20&direction={direction}")
-    data = requests.get(url, timeout=10).json()
+    if data is None:
+        data = fetch_arrivals()
     return parse_trains(data, key, count=count), parse_feed_time(data)
 
 
@@ -144,7 +161,7 @@ def fetch_alert():
     The per-route endpoint is a few hundred bytes, where the full alert index
     is over 150 KB; at one call per refresh that difference matters.
     """
-    data = requests.get(ALERTS_URL, timeout=10).json()
+    data = line.get_json(ALERTS_URL)
     if not isinstance(data, list) or not data:
         return ""
     row = data[0]
@@ -696,14 +713,26 @@ state = {
     "clock_skew": 0.0,    # this Pi's clock minus SEPTA's, in seconds
     "alert": "",          # live Media/Wawa service message, if any
     "alert_since": 0.0,   # when that message first appeared, so it pages from its start
+    "retry_in": REFRESH_SECS,  # seconds until the next fetch; grows while SEPTA fails
 }
+
+
+def next_retry(prev, error):
+    """Seconds to wait before asking SEPTA again, given how the last ask went."""
+    if error is None:
+        return REFRESH_SECS
+    if isinstance(error, line.Throttled):
+        return max(BACKOFF_MAX, min(error.retry_after or 0, THROTTLE_MAX))
+    return min(max(prev, REFRESH_SECS) * 2, BACKOFF_MAX)
 
 
 def refresh():
     state["fetching"] = True
+    error = None
     try:
-        nb, feed_time = fetch_trains("N")
-        sb, _ = fetch_trains("S")
+        data = fetch_arrivals()
+        nb, feed_time = fetch_trains("N", data=data)
+        sb, _ = fetch_trains("S", data=data)
         tv = line.fetch_trainview()
 
         state["northbound"] = nb
@@ -718,17 +747,27 @@ def refresh():
     except Exception as e:
         # The last good data is kept rather than blanked: render() marks it
         # stale once it is too old, which is more use than an empty board.
-        print(f"Refresh failed: {e}")
+        error = e
     else:
-        # Alerts are secondary; losing them must not cost a good train fetch.
+        # Alerts are secondary; losing them must not cost a good train fetch,
+        # but a refusal still has to slow everything down.
         try:
             alert = fetch_alert()
             if alert != state["alert"]:
                 state["alert"] = alert
                 state["alert_since"] = time.time()
+        except line.Throttled as e:
+            error = e
         except Exception as e:
             print(f"Alert fetch failed: {e}")
     finally:
+        state["retry_in"] = next_retry(state["retry_in"], error)
+        if isinstance(error, line.Throttled):
+            print(f"SEPTA refused the request ({error}); "
+                  f"waiting {state['retry_in']}s before asking again")
+        elif error is not None:
+            print(f"Refresh failed ({type(error).__name__}: {error}); "
+                  f"retrying in {state['retry_in']}s")
         state["fetching"] = False
 
 
@@ -757,8 +796,9 @@ def main():
     try:
         while True:
             now = time.time()
-            # GPS moves faster than the timetable, so poll on the shorter cycle.
-            if now - last_fetch > 30 and not state["fetching"]:
+            # GPS moves faster than the timetable, so poll on the shorter
+            # cycle, stretched out by refresh() while SEPTA is failing.
+            if now - last_fetch > state["retry_in"] and not state["fetching"]:
                 threading.Thread(target=refresh, daemon=True).start()
                 last_fetch = now
             framebuffer[:] = render(state)
