@@ -73,3 +73,12 @@ for direction, label in (("N", "TO CENTER CITY"), ("S", "TO MEDIA/WAWA")):
         print(f"  Dot         : no, because train {t['train_id']} has no live GPS record")
         print("                This is correct if it has not started its run yet.")
         print(f"                (SEPTA is currently tracking: {', '.join(sorted(mw)) or 'no Media/Wawa trains'})")
+
+print(f"\n{'=' * 60}\nSERVICE ALERT (paged across the header)")
+alert = D.fetch_alert()
+if alert:
+    print(f"  {len(alert)} characters, as the board will show it:\n")
+    import textwrap
+    print(textwrap.indent(textwrap.fill(alert, 76), "  "))
+else:
+    print("  none for the Media/Wawa line right now")

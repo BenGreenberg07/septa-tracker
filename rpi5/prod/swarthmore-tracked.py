@@ -159,32 +159,53 @@ def fetch_alert():
     """Any live service message for the Media/Wawa line, or "".
 
     The per-route endpoint is a few hundred bytes, where the full alert index
-    is over 150 KB; at one call per refresh that difference matters.
+    is over 150 KB; at one call per refresh that difference matters. It
+    normally answers with one row, but every row is read, since the full index
+    shows SEPTA does sometimes list a route more than once.
     """
     data = line.get_json(ALERTS_URL)
-    if not isinstance(data, list) or not data:
+    if not isinstance(data, list):
         return ""
-    row = data[0]
-    if not isinstance(row, dict) or row.get("Error"):
-        return ""
-    for field in ("current_message", "detour_message", "advisory_message"):
-        msg = clean_alert(row.get(field))
-        if msg:
-            return msg
-    return ""
+    found = []
+    for row in data:
+        if not isinstance(row, dict) or row.get("Error"):
+            continue
+        # A current message is about service right now; it goes ahead of a
+        # detour or a planned-work advisory.
+        for field in ("current_message", "detour_message", "advisory_message"):
+            msg = clean_alert(row.get(field))
+            if msg and msg not in found:
+                found.append(msg)
+    return " ".join(found)
 
 
-_TAG_RE = re.compile(r"<[^>]+>")
+# SEPTA's alert HTML, as actually served (checked against the live feed in
+# October 2026): an <h3> title then a <p> body per item, with the body often
+# pasted from Word or Outlook and wrapped in nested <span>s that split words
+# mid-way ("train</span><span>s"). So inline tags are removed outright, block
+# tags become a space, and a title is joined to its body with a colon.
+_HEADING_END_RE = re.compile(r"</\s*h[1-6]\s*>", re.I)
+_BLOCK_RE = re.compile(r"<\s*/?\s*(?:p|div|br|li|ul|ol|tr|td|table|h[1-6])\b[^>]*>", re.I)
+_TAG_RE = re.compile(r"<[^>]*>")
 _WS_RE = re.compile(r"\s+")
+_SPACE_BEFORE_PUNCT_RE = re.compile(r"\s+([.,;:!?)\]])")
+_SPACE_AFTER_OPEN_RE = re.compile(r"([(\[])\s+")
+_DOUBLE_PUNCT_RE = re.compile(r"([.:!?])\s*:")
 
 
 def clean_alert(msg):
-    """SEPTA's alert text as one line: it arrives as HTML with entities."""
+    """SEPTA's alert text as one readable line: it arrives as HTML."""
     if not msg:
         return ""
-    text = _TAG_RE.sub(" ", str(msg))
-    text = html.unescape(text)
-    return _WS_RE.sub(" ", text).strip()
+    text = _HEADING_END_RE.sub(": ", str(msg))
+    text = _BLOCK_RE.sub(" ", text)
+    text = _TAG_RE.sub("", text)
+    text = html.unescape(text)            # &nbsp; becomes \xa0, which \s covers
+    text = _WS_RE.sub(" ", text)
+    text = _SPACE_BEFORE_PUNCT_RE.sub(r"\1", text)
+    text = _SPACE_AFTER_OPEN_RE.sub(r"\1", text)
+    text = _DOUBLE_PUNCT_RE.sub(r"\1", text)
+    return text.strip().rstrip(":").strip()
 
 
 def parse_trains(data, direction_key, count=1):
