@@ -454,6 +454,25 @@ def stop_at(pos):
     return i, line.LINE[i][0], line.LINE[i][1]
 
 
+def draw_marker(draw, x, y, color, unknown, delay):
+    """The train dot, shaped as well as coloured by how late it is running.
+
+    Green, orange and red are the worst trio there is for red-green colour
+    blindness, about one man in twelve, so the shape says it too: a circle on
+    time, a square a little late, a warning triangle badly late, all solid, and a
+    hollow ring only when SEPTA has no status at all.
+    """
+    if unknown:
+        draw.ellipse([x - 3, y - 3, x + 3, y + 3], outline=color, fill=BLACK)
+        return
+    if delay <= 0:
+        draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill=color)
+    elif delay < 6:
+        draw.rectangle([x - 3, y - 3, x + 3, y + 3], fill=color)
+    else:
+        draw.polygon([(x, y - 4), (x + 4, y + 3), (x - 4, y + 3)], fill=color)
+
+
 def draw_strip(draw, y, direction, train, track):
     """A fixed map of the line: Penn Medicine at the left, Wawa at the right,
     Swarthmore marked between them, and a dot at every stop in between.
@@ -569,8 +588,7 @@ def draw_strip(draw, y, direction, train, track):
             break
         draw.point((x, y), fill=shade(color, 1.0 - 0.55 * k / TAIL_LEN))
 
-    draw.ellipse([tx - 3, y - 3, tx + 3, y + 3], fill=color)
-    draw.ellipse([tx - 1, y - 1, tx + 1, y + 1], fill=BLACK)
+    draw_marker(draw, tx, y, color, unknown, train["delay"])
 
     if here:
         draw.text((here_x, label_y), here, font=FONT_TN, fill=color)
