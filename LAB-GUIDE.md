@@ -138,8 +138,16 @@ Press **Ctrl-C** to stop. The service goes back to how it was.
 - **Colors.** Yellow headings and a green "ON TIME". If red and blue look
   swapped, the color-order handling is wrong.
 - **Orientation.** Text right side up, with nothing scrambled into blocks.
-- **The strip.** First stop on the left, Swarthmore in the middle, last stop on
-  the right, with the train dot moving along it.
+- **The strip.** A fixed map of the line under each direction, Swarthmore
+  ringed in yellow, with the train dot moving left to right toward the
+  destination named above it.
+
+There is also a big-type version with no map and much larger countdowns, for
+reading from further away. Try both and pick one:
+
+```bash
+./pi/try-script.sh rpi5/prod/swarthmore-big.py
+```
 
 If anything looks wrong: Ctrl-C, take a photo, and send it to Claude.
 
@@ -164,7 +172,9 @@ error; just try the next one.
 ./pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py
 ```
 
-It should end with **"Running, and it is the only program on the panels."**
+(or `swarthmore-big.py`, whichever you picked in step 8). It should end with
+**"Running, and it is the only program on the panels."** It also turns on
+systemd's watchdog for these boards, so a frozen display restarts itself.
 This doesn't rewrite Nick's service; it adds a small override on top. To undo:
 `./pi/set-panel-script.sh --revert`.
 

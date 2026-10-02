@@ -254,32 +254,6 @@ def track_train(train_id, trainview, direction=None):
     }
 
 
-def strip_window(direction, span=6):
-    """Indices of the stations to draw on the progress strip.
-
-    Always ends at Swarthmore, and looks back up the line in the direction the
-    train is coming from: north for a Center City train, south for a Wawa one.
-    """
-    if direction == "N":          # train arrives from the Wawa/Media end
-        idxs = list(range(SWAT_IDX + span - 1, SWAT_IDX - 1, -1))
-    else:                          # train arrives from Center City
-        idxs = list(range(SWAT_IDX - span + 1, SWAT_IDX + 1))
-    return [i for i in idxs if 0 <= i < len(LINE)]
-
-
-def journey_start_index(origin_name, direction):
-    """Where the train's run meets the Media/Wawa line.
-
-    A run that started off this line (a southbound train out of Norristown,
-    say) joins at the Center City end, so it is treated as entering the line
-    there rather than being dropped.
-    """
-    idx = station_index(origin_name)
-    if idx is not None:
-        return idx
-    return 0 if direction == "S" else len(LINE) - 1
-
-
 # The strip is a fixed map of the line rather than a per-train window: the
 # same stretch is drawn whoever is coming, so the picture on the platform does
 # not rearrange itself between trains.
@@ -299,16 +273,3 @@ def map_fraction(pos):
 def map_stops():
     """Indices of every stop drawn on the fixed strip, Penn Med to Wawa."""
     return list(range(MAP_START, MAP_END + 1))
-
-
-def journey_fraction(pos, origin_name, direction):
-    """How far the train has come: 0.0 at its origin, 1.0 at Swarthmore.
-
-    Measured over the stretch of the run that lies on the Media/Wawa line;
-    for a train joining from another line that is the portion from Temple.
-    """
-    start = journey_start_index(origin_name, direction)
-    span = SWAT_IDX - start
-    if span == 0:
-        return 1.0
-    return max(0.0, min(1.0, (pos - start) / span))

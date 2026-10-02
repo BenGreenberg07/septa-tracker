@@ -56,56 +56,54 @@ I = {n: i for i, (n, _, _, _) in enumerate(line.LINE)}
 SCENARIOS = [
     ("Not in service yet",
      "No GPS fix for this train id yet, so the status reads SCHED and no marker "
-     "is drawn. The journey anchors still show, so the run is visible before it moves.",
+     "is drawn. The fixed line map still shows, so the platform's place on it is clear.",
      "N", train("Doylestown", "Wawa", "3:19 PM", 0, mins=22), None),
 
     ("Just left the origin",
-     "Pulled out of Wawa. The marker sits at the left anchor and the trail behind "
-     "it starts to grow. The countdown is the headline number.",
+     "Pulled out of Wawa. The Center City map runs Wawa to Penn, so the marker "
+     "starts at the left end, taking over the WAWA label, and moves right.",
      "N", train("Doylestown", "Wawa", "3:49 PM", 0, mins=18),
      track(I["Wawa"] - 0.2)),
 
     ("On the way, on time",
-     "Roughly halfway from Wawa to Swarthmore. The leg past Swarthmore stays faint "
-     "because it is not this platform's concern.",
+     "Just past Media, named under its own dot. On time, so the marker is a "
+     "solid green circle and the stretch already covered stays dimly lit.",
      "N", train("Doylestown", "Wawa", "2:49 PM", 0, mins=11),
      track(I["Media"] + 0.4)),
 
     ("Running late",
-     "Orange for a delay under six minutes. Countdown, delay chip and marker all "
-     "carry the same color, so the delay reads three ways at once.",
+     "Under six minutes late: orange, and a square marker so the delay reads "
+     "without colour too. Countdown, chip and marker all share the colour.",
      "N", train("Chestnut H East", "Media", "4:28 PM", 4, mins=9),
      track(I["Media"] - 0.6)),
 
     ("Badly delayed",
-     "Six minutes or more turns everything red. The countdown already includes the "
-     "delay, so it is the real wait rather than the timetable's.",
+     "Six minutes or more: red, with a triangle marker. The countdown already "
+     "includes the delay, so it is the real wait rather than the timetable's.",
      "N", train("Doylestown", "Wawa", "3:49 PM", 12, mins=15),
      track(I["Wallingford"] + 0.4)),
 
     ("Nearly here",
-     "Past Wallingford and closing on the ringed Swarthmore anchor, with the trail "
-     "covering almost the whole approach.",
+     "Just past Wallingford, one stop out, closing on Swarthmore's yellow ring.",
      "N", train("Lansdale", "Wawa", "3:19 PM", 1, mins=2),
      track(I["Wallingford"] - 0.2)),
 
     ("Arriving",
      "GPS has it at Swarthmore. The countdown reads NOW, the status flips to "
-     "ARRIVING and the marker lands on the platform anchor.",
+     "ARRIVING and the marker sits on Swarthmore, taking over its label.",
      "N", train("Doylestown", "Media", "2:49 PM", 0, mins=0),
      track(float(I["Swarthmore"]))),
 
     ("SEPTA has no status",
      "The feed returns a 999-minute delay as a sentinel meaning it has no status "
      "for this train. Showing that as a real delay would be nonsense, so the board "
-     "says NO STATUS and everything goes gray rather than claiming on time.",
+     "says NO STATUS: gray, with a hollow ring marker, rather than claiming on time.",
      "S", train("Wawa", "Temple U", "4:50 PM", 0, unknown=True, mins=11),
      track(I["Fernwood-Yeadon"] + 0.4, unknown=True)),
 
     ("Joined from another line",
-     "A southbound run that started at Norristown, which is not on the Media/Wawa "
-     "line. Progress is measured from where it joins at Temple, while the label "
-     "still names the true first stop.",
+     "A southbound run that started at Norristown, off this line. The map is "
+     "fixed, so it simply appears once GPS puts it on the Media/Wawa stretch.",
      "S", train("Wawa", "Norristown", "3:12 PM", 0, mins=7),
      track(I["Secane"] + 0.3)),
 
@@ -184,7 +182,7 @@ def main():
     draw.text((pad, 30), "Live train tracking on the Swarthmore board",
               font=f_title, fill=(238, 240, 244))
     draw.text((pad, 70),
-              "Every state of the new position strip, drawn by the production "
+              "Every state of the line map, drawn by the production "
               "display code at true panel resolution (256 x 128, 16 panels).",
               font=f_sub, fill=(138, 146, 158))
 

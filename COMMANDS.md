@@ -47,7 +47,9 @@ Every command below marked "from your Mac" assumes that shortcut.
 | Restart it | `sudo systemctl restart septa-display.service` | `ssh septa 'sudo systemctl restart septa-display.service'` |
 | Off, and stay off after reboot | `~/septa-tracker/pi/stop-panel.sh --disable` | `ssh septa '~/septa-tracker/pi/stop-panel.sh --disable'` |
 | Which program runs at boot | `~/septa-tracker/pi/set-panel-script.sh --show` | `ssh septa '~/septa-tracker/pi/set-panel-script.sh --show'` |
-| Set what runs at boot | `~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py` | `ssh septa '~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py'` |
+| Set what runs at boot (map board) | `~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py` | `ssh septa '~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-tracked.py'` |
+| Set what runs at boot (big-type board) | `~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-big.py` | `ssh septa '~/septa-tracker/pi/set-panel-script.sh rpi5/prod/swarthmore-big.py'` |
+| Check the Pi's clock and time zone | `timedatectl` | `ssh septa timedatectl` |
 | Undo that, back to the original | `~/septa-tracker/pi/set-panel-script.sh --revert` | `ssh septa '~/septa-tracker/pi/set-panel-script.sh --revert'` |
 
 Turning it off with `stop-panel.sh` leaves the Pi running, so you keep SSH. It
@@ -184,8 +186,9 @@ sudo reboot
 ## On your Mac only
 
 ```bash
-cd ~/Documents/septa-tracker
-./run-sim.sh
+cd ~/septa-tracker
+./run-sim.sh          # the map board
+./run-sim.sh big      # the big-type board
 ```
 
 Renders the board in your browser at http://127.0.0.1:8800 with no hardware, for

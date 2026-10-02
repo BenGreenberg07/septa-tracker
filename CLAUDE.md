@@ -27,7 +27,9 @@ while and recovered in September 2026.
 - **`COMMANDS.md`** is the command cheat sheet, Pi and SSH forms.
 - **`HARDWARE.md`** records confirmed hardware faults (under-voltage, heat,
   panel 14 red), the evidence for each, and what to buy.
-- **`rpi5/TRACKING.md`** explains how the live train tracking works.
+- **`rpi5/TRACKING.md`** explains how the live train tracking works, both
+  board layouts, and how the board fails safe (backoff, stale data, clock
+  skew, watchdog, overnight dimming).
 - **`pi/`** holds the maintenance scripts. `pi/doctor.sh` is read-only and is
   almost always the right first command.
 - **`rpi5/tools/`** holds `panel-test.py` (dead pixel and wiring patterns) and
@@ -56,20 +58,35 @@ while and recovered in September 2026.
 5. **Never put the Pi password in this repo.** It is public. The password is in
    the separate onboarding PDF.
 
+## The two boards
+
+- `rpi5/prod/swarthmore-tracked.py`: countdowns plus a line map per direction.
+- `rpi5/prod/swarthmore-big.py`: countdowns about 41 LEDs tall, no map, for
+  reading from the far end of the platform. It imports the tracked board and
+  replaces only `render()`, so fetching, header, alerts and the main loop are
+  shared. `rpi5/tools/api-check.py` and `make-scenarios.py` depend on the
+  tracked board's `fetch_trains` and `draw_block` signatures; keep them.
+
 ## Running it
 
 - On the Pi: `pi/try-script.sh <file>` to test, `pi/set-panel-script.sh <file>`
   to set what runs at boot.
-- On a Mac: `./run-sim.sh` renders the board in a browser at
+- On a Mac: `./run-sim.sh` (or `./run-sim.sh big`) renders the board in a browser at
   http://127.0.0.1:8800, no hardware needed.
 - Flicker experiments: `SEPTA_PLANES` and `SEPTA_TEMPORAL_PLANES` env vars
   (defaults 4 and 2).
 
 ## Open items
 
-- Move the Pi's wifi off Nick's personal eduroam login to Swat Device (ITS).
-  `pi/doctor.sh` prints the MAC address they need.
-- Confirm heat and input voltage are sane before leaving it running unattended.
-- SEPTA alert messages (expresses skipping Swarthmore) are still unused; both
-  project documents call this the top missing feature, likely as a ticker.
-- The tracking board and the `pi/` scripts have never run on the real hardware.
+- Move the Pi's wifi off wired ethernet onto Swat Device (registered with ITS,
+  not yet switched). `pi/doctor.sh` prints the MAC address.
+- Check `timedatectl` on the Pi shows `America/New_York` and "System clock
+  synchronized: yes". The board no longer depends on the zone (it asks for
+  Eastern time explicitly), but logs and anything else on the Pi still do.
+  Fix with `sudo timedatectl set-timezone America/New_York`.
+- Decide which layout runs at boot: tracked (map) or big-type (distance).
+- The watchdog, quiet-hours dimming and the pixel font have only run in the
+  simulator. After `pi/update.sh`, re-run `pi/set-panel-script.sh <board>` once
+  so the service picks up `WatchdogSec`.
+- The Media/Wawa advisory text can be long (over 1000 characters in October
+  2026, about two minutes of paging). Consider showing only the titles.
