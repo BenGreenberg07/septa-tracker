@@ -707,11 +707,12 @@ def to_framebuffer(canvas):
     return np.ascontiguousarray(arr).copy()
 
 
-def render(state):
-    canvas = Image.new("RGB", (WIDTH, HEIGHT), BLACK)
-    draw = ImageDraw.Draw(canvas)
+def draw_header(canvas, draw, state):
+    """The top 20 rows: line, logo and status on the left, the clock right.
 
-    # Header
+    Shared with the big-type board, so the stale-data, clock and alert
+    warnings read the same whichever layout is running.
+    """
     text_w = int(draw.textlength("[MED]", font=FONT_SM))
     swat_x = text_w + 10 + septa_logo.width + 6
     now = local_now().strftime("%I:%M %p")
@@ -734,6 +735,13 @@ def render(state):
               text, font=font, fill=fill)
 
     draw.line([(0, 20), (WIDTH, 20)], fill=GRAY, width=1)
+
+
+def render(state):
+    canvas = Image.new("RGB", (WIDTH, HEIGHT), BLACK)
+    draw = ImageDraw.Draw(canvas)
+
+    draw_header(canvas, draw, state)
 
     draw_block(draw, 22, "TO CENTER CITY", "N",
                state["northbound"], state["track_n"])
@@ -816,7 +824,10 @@ def refresh():
         state["fetching"] = False
 
 
-def main():
+def main(render=render):
+    """Fetch, draw and show, forever. `render` picks the layout, so the big-type
+    board runs this same loop, fetching and all, with its own drawing.
+    """
     wait_for_network()
     refresh()
 
