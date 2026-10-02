@@ -55,6 +55,17 @@ script="$(cd "$(dirname "$script")" && pwd)/$(basename "$script")"
 py=$(find_panel_python) || {
   echo "${RED}Could not find a Python that has the panel library installed.${OFF}"; exit 1; }
 
+# Scripts that ping systemd's watchdog (the tracked and big-type boards) get
+# one: if the render loop hangs, systemd restarts the display after 90 s, where
+# Restart= alone only notices a crash. Anything else (the original boards) has
+# it switched off explicitly, since it would be killed for never pinging.
+if grep -q "WATCHDOG=1" "$script"; then
+  watchdog="WatchdogSec=90
+NotifyAccess=main"
+else
+  watchdog="WatchdogSec=0"
+fi
+
 if ! service_exists; then
   echo "No $SERVICE exists yet, so creating one."
   sudo tee "/etc/systemd/system/$SERVICE" >/dev/null <<UNIT
@@ -68,6 +79,7 @@ ExecStart=$py -u $script
 WorkingDirectory=$(dirname "$script")
 Restart=always
 RestartSec=5
+$watchdog
 
 [Install]
 WantedBy=multi-user.target
@@ -81,6 +93,7 @@ else
 ExecStart=
 ExecStart=$py -u $script
 WorkingDirectory=$(dirname "$script")
+$watchdog
 CONF
 fi
 

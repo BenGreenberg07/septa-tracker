@@ -11,6 +11,7 @@ simulator serves the frames as a web page.
 """
 
 import os
+import socket
 import sys
 import threading
 import time
@@ -367,10 +368,10 @@ def load_septa_logo(path, size=16):
 
 
 def wait_for_network(timeout=60):
-    import socket
     print("Waiting for network...")
     start = time.time()
     while time.time() - start < timeout:
+        sd_notify("WATCHDOG=1")      # waiting on the network is not a hang
         try:
             socket.create_connection(("www3.septa.org", 80), timeout=5)
             print("Network ready.")
@@ -754,6 +755,32 @@ def render(state):
 
 # --------------------------------------------------------------------- main
 
+# A refresh that has been running this long is stuck (each request has its
+# own 10 s timeout), so the watchdog is allowed to fire and restart us.
+FETCH_HUNG_AFTER = 600
+
+
+def sd_notify(message):
+    """Tell systemd something, e.g. READY=1 or WATCHDOG=1. A no-op unless
+    systemd started us with NOTIFY_SOCKET set, so running by hand is unchanged.
+
+    With WatchdogSec= in the unit, systemd kills and restarts the board when
+    WATCHDOG=1 stops arriving. Restart= alone only notices a crash; a render
+    loop wedged inside the panel driver would otherwise sit frozen forever.
+    """
+    addr = os.environ.get("NOTIFY_SOCKET")
+    if not addr:
+        return
+    if addr.startswith("@"):
+        addr = "\0" + addr[1:]          # abstract socket namespace
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as sock:
+            sock.connect(addr)
+            sock.sendall(message.encode())
+    except OSError:
+        pass
+
+
 septa_logo = load_septa_logo(SEPTA_LOGO_PATH)
 
 state = {
@@ -781,6 +808,7 @@ def next_retry(prev, error):
 
 def refresh():
     state["fetching"] = True
+    state["fetch_started"] = time.time()
     error = None
     try:
         data = fetch_arrivals()
@@ -830,6 +858,7 @@ def main(render=render):
     """
     wait_for_network()
     refresh()
+    sd_notify("WATCHDOG=1")
 
     m1, pixels_across = build_map(WIDTH, 64, N_ADDR_LINES, True, row_offset=64)
     m2, _ = build_map(WIDTH, 64, N_ADDR_LINES, True, row_offset=0)
@@ -848,6 +877,7 @@ def main(render=render):
         geometry=geometry,
     )
 
+    sd_notify("READY=1")
     last_fetch = time.time()
     try:
         while True:
@@ -859,6 +889,12 @@ def main(render=render):
                 last_fetch = now
             framebuffer[:] = render(state)
             matrix.show()
+            # Pinged from here, after a frame really went out, so a hang
+            # anywhere in drawing or the panel driver stops the pings. A
+            # refresh thread stuck for ten minutes does too.
+            if not (state["fetching"]
+                    and now - state.get("fetch_started", now) > FETCH_HUNG_AFTER):
+                sd_notify("WATCHDOG=1")
             time.sleep(1)
     except KeyboardInterrupt:
         pass
