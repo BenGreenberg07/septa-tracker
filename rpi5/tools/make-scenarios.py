@@ -37,7 +37,7 @@ UI_B = os.path.join(FONT_DIR, "DejaVuSans-Bold.ttf")
 def train(dest, origin, arrives, delay, unknown=False, mins=None):
     from datetime import datetime, timedelta
     sched = None if mins is None else (
-        datetime.now() + timedelta(minutes=mins - delay))
+        D.local_now() + timedelta(minutes=mins - delay))
     return {"dest": dest, "origin": origin, "arrives": arrives,
             "delay": delay, "unknown": unknown, "sched_dt": sched,
             "train_id": "0000"}

@@ -28,7 +28,7 @@ D = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(D)
 import septa_line as line
 
-print(f"Now: {datetime.now():%a %d %b %Y, %I:%M %p}\n")
+print(f"Now: {D.local_now():%a %d %b %Y, %I:%M %p}\n")
 
 tv = line.fetch_trainview()
 print(f"SEPTA is tracking {len(tv)} trains right now, of which these are on "
@@ -48,7 +48,7 @@ for direction, label in (("N", "TO CENTER CITY"), ("S", "TO MEDIA/WAWA")):
     trains, feed_time = D.fetch_trains(direction)
     t = trains[0]
     if feed_time:
-        skew = (datetime.now() - feed_time).total_seconds()
+        skew = (D.local_now() - feed_time).total_seconds()
         print(f"  Feed clock  : {feed_time:%-I:%M %p}, this machine is "
               f"{skew:+.0f}s from it")
     print(f"  Board shows : {t['origin'] or '?'} -> {t['dest']} at {t['arrives']}"

@@ -18,6 +18,11 @@ import re
 import html
 from datetime import datetime, timedelta
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:          # Python < 3.9
+    ZoneInfo = None
+
 import numpy as np
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
@@ -113,6 +118,25 @@ STALE_AFTER = 180        # seconds
 CLOCK_SKEW_LIMIT = 120   # seconds
 # How long one page of a service alert holds before the next replaces it.
 ALERT_PAGE_SECS = 4
+
+# SEPTA's timestamps are Philadelphia wall-clock time with no zone attached.
+try:
+    SEPTA_TZ = ZoneInfo("America/New_York") if ZoneInfo else None
+except Exception:            # no tz database installed
+    SEPTA_TZ = None
+
+
+def local_now():
+    """Now, as Philadelphia wall-clock time, whatever zone the Pi is set to.
+
+    Every countdown is SEPTA's naive local time minus this, so a Pi left on
+    UTC would otherwise put every train four or five hours out. Asking for the
+    zone explicitly removes that failure; a clock that is genuinely wrong is
+    still caught, by the skew check against SEPTA's own timestamp.
+    """
+    if SEPTA_TZ is None:
+        return datetime.now()
+    return datetime.now(SEPTA_TZ).replace(tzinfo=None)
 
 
 def fetch_arrivals():
@@ -210,7 +234,7 @@ def clean_alert(msg):
 
 def parse_trains(data, direction_key, count=1):
     trains = []
-    now = datetime.now()
+    now = local_now()
     for value in data.values():
         if not isinstance(value, list):
             continue
@@ -369,7 +393,7 @@ def minutes_until(train):
     if sched is None:
         return None
     due = sched + timedelta(minutes=train.get("delay", 0))
-    mins = (due - datetime.now()).total_seconds() / 60
+    mins = (due - local_now()).total_seconds() / 60
     if mins < -1 or mins > 99:
         return None
     return int(max(0, round(mins)))
@@ -690,7 +714,7 @@ def render(state):
     # Header
     text_w = int(draw.textlength("[MED]", font=FONT_SM))
     swat_x = text_w + 10 + septa_logo.width + 6
-    now = datetime.now().strftime("%I:%M %p")
+    now = local_now().strftime("%I:%M %p")
     tw = int(draw.textlength(now, font=FONT_SM))
 
     text, fill, font, wide = header_status(
@@ -763,7 +787,7 @@ def refresh():
         state["track_s"] = (line.track_train(sb[0]["train_id"], tv, "S")
                             if sb[0]["train_id"] else None)
         state["last_ok"] = time.time()
-        state["clock_skew"] = ((datetime.now() - feed_time).total_seconds()
+        state["clock_skew"] = ((local_now() - feed_time).total_seconds()
                                if feed_time else 0.0)
     except Exception as e:
         # The last good data is kept rather than blanked: render() marks it
