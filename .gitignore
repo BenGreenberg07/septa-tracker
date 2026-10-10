@@ -2,3 +2,4 @@ venv/
 __pycache__/
 .DS_Store
 rpi5/sim/_frames/
+CLAUDE.md
