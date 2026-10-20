@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SEPTA Station Display: Mounting and Case Build Plan</title>
+<style>
+  @page { size: Letter; margin: 0.6in 0.65in 0.7in 0.65in; }
+  :root { --ink:#1d1d1f; --muted:#5f6368; --rule:#d9dce1; --accent:#9b1b30; --warn:#b3261e; --ok:#2d6a3e; --tint:#f5f6f8; }
+  * { box-sizing: border-box; }
+  body { font: 10pt/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); margin: 0; }
+  h1 { font-size: 22pt; line-height: 1.15; margin: 0 0 4pt; letter-spacing: -0.01em; }
+  h2 { font-size: 13.5pt; margin: 20pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 7pt; padding-left: 16pt; }
+  li { margin: 0 0 2.5pt; }
+  a { color: #1a5fb4; text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.8pt; break-inside: auto; }
+  th, td { text-align: left; vertical-align: top; padding: 3.5pt 5pt; border-bottom: 0.6pt solid var(--rule); }
+  th { background: var(--tint); font-weight: 600; border-bottom: 1pt solid #b9bec6; }
+  tr { break-inside: avoid; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  .sub { color: var(--muted); font-size: 10.5pt; margin-bottom: 14pt; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); border: 1pt solid var(--ink); margin: 10pt 0 14pt; }
+  .meta div { padding: 5pt 7pt; border-right: 0.6pt solid var(--rule); }
+  .meta div:last-child { border-right: 0; }
+  .meta b { display: block; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .callout { border-left: 3pt solid var(--warn); background: #fbf1f0; padding: 7pt 10pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .callout.info { border-left-color: #1a5fb4; background: #eef4fb; }
+  .callout b:first-child { display: block; margin-bottom: 2pt; }
+  figure { margin: 8pt 0 12pt; break-inside: avoid; text-align: center; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 8.6pt; color: var(--muted); margin-top: 4pt; text-align: left; }
+  .two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14pt; align-items: start; }
+  .pb { break-before: page; }
+  .keep { break-inside: avoid; }
+  thead { display: table-header-group; }
+  .small { font-size: 8.6pt; color: var(--muted); }
+  .tag { display: inline-block; font-size: 6.8pt; font-weight: 700; letter-spacing: 0.04em; padding: 0.5pt 4pt; border-radius: 2pt; color: white; background: #7a7f87; vertical-align: 1pt; }
+  .tag.must { background: var(--warn); }
+  .check { padding-left: 0; }
+  .check li { list-style: none; padding-left: 15pt; text-indent: -15pt; }
+  .check li::before { content: "\2610\00a0\00a0"; }
+  code { font: 8.6pt "SF Mono", Menlo, monospace; background: var(--tint); padding: 0 2pt; }
+</style>
+</head>
+<body>
+
+<h1>Mounting and Case Build Plan</h1>
+<div class="sub">SEPTA Swarthmore Station Display: weatherproof case, brick-wall mounting, and bill of materials</div>
+
+<div class="meta">
+  <div><b>Project</b>E90 station display (Carretta, Fettig; advisor Prof. E. Masroor)</div>
+  <div><b>Prepared by</b>B. Greenberg, maintainer</div>
+  <div><b>Date / revision</b>2026-10-20 / Draft A</div>
+  <div><b>Status</b>For review and quoting. Not for installation until signed off.</div>
+</div>
+
+<div class="callout">
+  <b>Before anything is drilled or ordered</b>
+  This is a student design plan, not a stamped engineering drawing. The station belongs to SEPTA, so mounting on the
+  building needs SEPTA's written approval, and they may require their own engineer or contractor to review the anchors
+  and do the installation. The load numbers in section 3 are estimates to size parts and start that conversation.
+  Mains wiring at the station must be done by a licensed electrician or SEPTA facilities.
+</div>
+
+<h2>1. Summary</h2>
+<p>The display (16 LED panels, 1,024 × 512 mm active area, Raspberry Pi 5, 5 V / 100 A supply) moves from its current
+plastic case with a slide-in back into a powder-coated aluminium case, hung on a brick wall at the station with an
+aluminium Z-clip cleat and stainless epoxy anchors.</p>
+<table>
+  <tr><th style="width:22%">Decision</th><th>Choice</th><th style="width:36%">Why</th></tr>
+  <tr><td>Wall attachment</td><td>Aluminium Z-clip pair (Monarch MFSTR-050), 4 anchors at the rail, 2 anti-lift brackets at the bottom</td><td>Self-levelling, spreads the load, lifts off for service; the brackets stop theft and wind pry-out</td></tr>
+  <tr><td>Anchors</td><td>3/8 in. 316 stainless threaded rod in Simpson SET-3G epoxy; screen tubes if the brick is hollow-cored</td><td>Adhesive anchors do not wedge, so they do not split old brick; stainless will not rust or stain</td></tr>
+  <tr><td>Case structure</td><td>1 × 1 × 1/8 in. 6061 angle frame carrying all loads; 0.080 in. 5052 aluminium skins</td><td>Light, does not rust, cheap to have laser-cut, bent and powder-coated</td></tr>
+  <tr><td>Fabrication</td><td>Every sheet part fits SendCutSend's 30 × 36 in. powder-coat limit (case split at the centre line)</td><td>Ordered online from a CAD file; no local shop needed</td></tr>
+  <tr><td>Closures</td><td>Screwed back halves: #10-32 pin-in Torx stainless screws into rivnuts, EPDM gaskets</td><td>Replaces the slide-in back; threads never wear the aluminium; tamper-resistant</td></tr>
+  <tr><td>Window</td><td>3/16 in. UV-protected polycarbonate, light smoke tint, floating in gaskets with no holes</td><td>Will not shatter; UV grade does not yellow; tint improves LED contrast; floating mount allows 4 mm of expansion</td></tr>
+  <tr><td>Cooling</td><td>Bottom intake and top exhaust slots with insect mesh, under a rain hood; optional fan</td><td>About 80 W of heat at normal content, up to 400 W at full white</td></tr>
+</table>
+
+<div class="keep"><h2>2. Design basis</h2>
+<table>
+  <tr><th style="width:30%">Item</th><th>Value</th><th style="width:28%">Source / status</th></tr>
+  <tr><td>Active display area</td><td>1,024 × 512 mm (16 panels, each 256 × 128 mm)</td><td>E90 report, measured</td></tr>
+  <tr><td>Case envelope</td><td>1,100 W × 600 H × 120 D mm (43.3 × 23.6 × 4.7 in.), plus a 25 mm rain hood</td><td>This plan; confirm in CAD</td></tr>
+  <tr><td>Estimated weight</td><td>About 27 kg (60 lb), breakdown below</td><td><span class="tag must">WEIGH</span> the current assembly</td></tr>
+  <tr><td>Design weight</td><td>75 lb (34 kg), about 25% above the estimate</td><td>Covers the estimate's uncertainty</td></tr>
+  <tr><td>Heat inside the case</td><td>About 80 W typical (≈1 A per panel), up to about 400 W at full white</td><td>E90 report measurements</td></tr>
+  <tr><td>Mains</td><td>One 120 V outlet, GFCI, weatherproof in-use cover</td><td>E90 report: one outlet only</td></tr>
+  <tr><td>Location</td><td>Brick wall of the station building, under the canopy if possible, bottom edge 2.1 to 2.4 m up</td><td><span class="tag must">CONFIRM</span> with SEPTA</td></tr>
+</table></div>
+
+<h3>Weight estimate</h3>
+<table>
+  <tr><th>Part</th><th class="n">kg</th><th>Basis</th></tr>
+  <tr><td>Aluminium skins (bezel, back, top, bottom, sides, hood)</td><td class="n">7.2</td><td>1.32 m² of 0.080 in. (2.03 mm) sheet</td></tr>
+  <tr><td>Angle frame</td><td class="n">3.8</td><td>8.7 m of 1 × 1 × 1/8 in. angle at 0.29 lb/ft</td></tr>
+  <tr><td>Polycarbonate window</td><td class="n">3.3</td><td>1,075 × 560 × 4.5 mm</td></tr>
+  <tr><td>LED panels</td><td class="n">5.6</td><td>16 × about 0.35 kg, estimated</td></tr>
+  <tr><td>Existing aluminium backplates</td><td class="n">3.5</td><td>Estimated (four 3 mm plates with cut-outs)</td></tr>
+  <tr><td>PSU, Pi, tray, cables, clips, hardware</td><td class="n">4.0</td><td>Estimated</td></tr>
+  <tr><th>Total</th><th class="n">≈ 27</th><th>≈ 60 lb. Design for 75 lb.</th></tr>
+</table>
+
+<div class="keep"><h2>3. Mounting</h2>
+<figure>
+  <img src="fig-section.svg" style="width:86%">
+  <figcaption><b>Figure 1.</b> Side section through the mounted case. The wall Z-rail is anchored to the brick and hooks upward; the
+  case rail is bolted to the case's internal frame and hooks down over it. Two L-brackets at the bottom tie the case to
+  the wall so it cannot be lifted off or pried outward.</figcaption>
+</figure></div>
+
+<h3>3.1 Why a Z-clip cleat</h3>
+<ul>
+  <li>The case hangs by gravity on a full-width rail, so the load spreads along the wall instead of sitting on a few points.</li>
+  <li>It self-levels and self-centres while two people lower it on, then lifts straight off for bench work.</li>
+  <li>The sign-industry version (aluminium Z-clips) is cheaper and better documented than a custom French cleat. Monarch
+  recommends its <a href="https://www.monarchmetal.com/monarch-z-clips-and-hanging-systems/aluminum-z-clip-high-load-capacity-2-inch-stock-clip-size-1-2-inch-projection-7-16-inch-lift-off-mfstr-050/">MFSTR-050</a>
+  high-load profile where larger bolts and masonry are involved: 1/2 in. projection, 7/16 in. lift-off.</li>
+  <li>Monarch states that capacity is set by the fasteners and the wall, not the clip, and that in lab tests the fasteners failed
+  before the clips deformed. The anchors are therefore the part to get right.</li>
+</ul>
+<div class="callout info"><b>Lift-off clearance</b>Lowering the case onto the rail needs at least 7/16 in. of clear space above the hood
+to the canopy or any overhang. Plan for 2 in. so it can be handled comfortably.</div>
+
+<h3>3.2 Anchors into brick</h3>
+<table>
+  <tr><th style="width:22%">Item</th><th>Specification</th></tr>
+  <tr><td>Anchor</td><td>3/8 in.-16 type 316 stainless threaded rod set in Simpson SET-3G epoxy (two-part, rated for concrete and masonry)</td></tr>
+  <tr><td>Quantity</td><td>6: four through the wall rail, one at each of the two bottom brackets. One anchor type and one drill bit for the whole job.</td></tr>
+  <tr><td>Solid brick</td><td>7/16 in. carbide bit, rotary only (hammer off). Embed at least 3-1/2 in., more if the manufacturer's brick table requires it.</td></tr>
+  <tr><td>Hollow-cored brick</td><td>9/16 in. hole with a Simpson Opti-Mesh <a href="https://www.ustoolandsupply.com/3gws373p.html">3GWS373P</a> screen tube (3/8 in. rod, 3-1/2 in. long), so the epoxy keys behind the shell instead of running into the void.</td></tr>
+  <tr><td>Hole cleaning</td><td>Blow out, brush with a Simpson ETB nylon brush sized to the hole, blow out again. A dusty hole is the most common cause of a weak adhesive anchor.</td></tr>
+  <tr><td>Cure</td><td>SET-3G cures slowly and installs only at 40 °F or warmer. Follow the cure-time table on the cartridge and hang the case the next day or later.</td></tr>
+  <tr><td>Placement</td><td>Centre anchors in whole bricks or in mortar joints as SEPTA prefers (below). Stay clear of wall edges, openings and the top course, and follow the manufacturer's edge and spacing distances. Slot the rail holes so anchors can land where the brick is sound.</td></tr>
+  <tr><td>Alternative adhesive</td><td>Hilti HIT-HY 270 has an ICC-ES evaluation (<a href="https://icc-es.org/wp-content/uploads/report-directory/ESR-4144.pdf">ESR-4144</a>) that specifically covers unreinforced and multi-wythe brick. If SEPTA's engineer wants published design values for historic brick, use it instead: same geometry, with Hilti rods and dispenser.</td></tr>
+  <tr><td>Fallback</td><td>3/8 in. stainless (18-8) sleeve anchors, if adhesive is not allowed. Do not use wedge anchors in old brick: they can split it.</td></tr>
+</table>
+<div class="callout info"><b>Brick or mortar joint?</b>Whole bricks are stronger. Mortar joints are the usual choice on historic buildings
+because they can be raked out and repointed later, leaving no damage to the brick face. This is SEPTA's decision. First, test-drill one
+hole in an inconspicuous spot to learn whether the bricks are solid or cored and how sound the mortar is.</div>
+
+<h3>3.3 Load check (estimate)</h3>
+<table>
+  <tr><th>Load case</th><th class="n">Working load</th><th class="n">Per anchor</th><th class="n">Per anchor × 4</th></tr>
+  <tr><td>Weight, carried as shear by the 4 rail anchors</td><td class="n">75 lb</td><td class="n">19 lb shear</td><td class="n">75 lb</td></tr>
+  <tr><td>Overturning (centre of mass ≈2.9 in. off the wall, resisted over ≈20 in.)</td><td class="n">218 lb·in</td><td class="n">≈3 lb tension</td><td class="n">≈11 lb</td></tr>
+  <tr><td>Wind suction, 30 psf placeholder on 7.1 ft² (all 6 anchors)</td><td class="n">213 lb</td><td class="n">36 lb tension</td><td class="n">142 lb</td></tr>
+</table>
+<p><b>Requirement:</b> each anchor's <i>allowable</i> load in this brick (from the manufacturer's masonry tables or ESR, not the
+concrete tables) must be at least 150 lb in tension and 100 lb in shear. 3/8 in. adhesive anchors in sound brick are normally well
+above this, but this is the number to confirm. The 30 psf wind figure is a deliberately conservative placeholder; under a canopy
+the real value is much lower. SEPTA's engineer should set it.</p>
+
+<h3>3.4 Corrosion and theft</h3>
+<ul>
+  <li><b>Stainless only</b> for anything in the wall or outside the case: plated steel rusts and stains brick.</li>
+  <li><b>Isolate stainless from aluminium</b> with <a href="https://www.mcmaster.com/products/nylon-sleeve-washers/">nylon shoulder (sleeve) washers</a>
+  under every nut on the rails and brackets, plus anti-seize or a corrosion-inhibiting compound on threads. Without isolation the
+  aluminium corrodes around each bolt in wet weather.</li>
+  <li><b>Anti-lift:</b> the bottom brackets are fixed to the case with pin-in Torx screws into rivnuts. Without them, a Z-clip mount
+  lifts off as easily for a thief as for a maintainer.</li>
+</ul>
+
+<h3>3.5 Installation sequence</h3>
+<ol>
+  <li>SEPTA approval; location and outlet agreed; test hole drilled; anchor type and placement settled.</li>
+  <li>Hold the wall rail level at its final height (bottom of the case 2.1 to 2.4 m above the platform) and mark anchor centres on sound brick or joints.</li>
+  <li>Drill rotary-only; clean (blow, brush, blow); insert screen tubes if needed; inject epoxy from the bottom of the hole up; twist the rods in.</li>
+  <li>Let it cure fully. Fit the rail with nylon washers and stainless nuts, and check it is level.</li>
+  <li>Locate the two bottom-bracket anchors from the case itself (or a template taken from it) and set them the same way.</li>
+  <li>Two people, on two ladders or a platform, lift the case above the rail and lower it until the clips engage. Never one person.</li>
+  <li>Fit the anti-lift screws at the bottom brackets. Plug in with a drip loop and test the GFCI.</li>
+</ol>
+
+<div class="keep"><h2>4. Case</h2>
+<figure>
+  <img src="fig-front.svg" style="width:92%">
+  <figcaption><b>Figure 2.</b> Front elevation: 1,100 × 600 mm overall with a 1,034 × 522 mm window opening. The bezel is made in two
+  halves joined behind the top and bottom borders by splice plates, so each half fits the powder-coat size limit. Red dashed: the
+  wall rail, its four anchors and the two anti-lift brackets, all behind the case.</figcaption>
+</figure></div>
+
+<h3>4.1 Structure</h3>
+<ul>
+  <li><b>Frame:</b> two rectangular rings of <a href="https://www.onlinemetals.com/en/buy/aluminum/1-x-1-x-0-125-aluminum-angle-6061-t6-extruded-structural/pid/971">1 × 1 × 1/8 in. 6061-T6 angle</a>
+  (front and back), joined by short depth members at the corners and at the centre line, bolted through laser-cut gusset plates,
+  about 9 m (30 ft) of angle in total. The frame carries every load: the case rail, the brackets, the panel backplates and the
+  electronics tray all bolt to it, never to a bare skin.</li>
+  <li><b>Skins:</b> 0.080 in. 5052-H32 aluminium, laser-cut and bent with 15 mm return flanges, powder-coated. The front bezel, back,
+  top and bottom are each split into two halves at the centre line, where the frame has a member, so every part fits the limits in Figure 3.</li>
+  <li><b>Panels:</b> the existing four aluminium backplates with their 16 panels bolt to the front ring, keeping the current
+  wiring and serpentine layout. Leave 3 to 5 mm between the LED faces and the window.</li>
+  <li><b>Electronics:</b> the PSU and Pi sit on a removable 2 mm aluminium tray bolted to the back ring's cross-member, so the back
+  halves come off without unplugging anything. The PSU's metal body sits flat on the tray to spread its heat.</li>
+</ul>
+
+<figure>
+  <img src="fig-parts.svg" style="width:100%">
+  <figcaption><b>Figure 3.</b> Every sheet-metal part, flat before bending, drawn to scale inside SendCutSend's 30 × 36 in. powder-coat
+  limit (their bending limit, 30 × 44 in., is looser). All fit. Sizes include flanges and are estimates until the CAD is drawn.</figcaption>
+</figure>
+
+<h3>4.2 Fabrication</h3>
+<ul>
+  <li>Order cut, bent and powder-coated parts from <a href="https://sendcutsend.com/materials/5052-aluminum/">SendCutSend (5052 aluminium)</a>,
+  and check their live <a href="https://sendcutsend.com/materials/processing-min-max/">size limits</a> and
+  <a href="https://sendcutsend.com/services/powder-coating/">powder-coating rules</a> (each part needs a small hanging hole) when quoting.
+  <a href="https://www.oshcut.com/materialdetails/aluminum-5052-h32">OSH Cut</a> is a comparable alternative.</li>
+  <li>Colour: matte black or dark grey around the window improves contrast. Under a canopy the extra solar heat of a dark case matters little; in full sun prefer a lighter grey.</li>
+  <li><b>Mask the grounding points</b> (one boss on each skin and on the frame) from powder coat, because powder coat insulates.</li>
+</ul>
+
+<h3>4.3 Closures and fasteners</h3>
+<ul>
+  <li>The back halves and service hatch close with <a href="https://www.albanycountyfasteners.com/Torx-Tamper-Proof-Security-Machine-Screw-10-32-p/880000.htm">#10-32 pin-in Torx (T-25) stainless button-head screws</a>
+  into 10-32 rivnuts about every 150 mm, which compresses the gasket evenly. Aluminium rivnuts avoid a stainless-aluminium couple in the sheet; if stainless rivnuts are used, add anti-seize.</li>
+  <li>Rivnuts are set with an <a href="https://www.amazon.com/Astro-Pneumatic-Thread-Setting-Riveter/dp/B07S6TG3HL">Astro 1442 hand rivnut tool</a>
+  plus its separate <a href="https://www.astrotools.com/product/10-32-mandrel-only/">10-32 mandrel</a> (the kit's own sizes do not include 10-32).</li>
+  <li>Every skin-to-frame seam gets <a href="https://www.amazon.com/clp/B089GKLW3H">closed-cell EPDM foam tape, 1/8 × 1/2 in.</a>, compressed by the screws.</li>
+  <li>A <b>service hatch</b> (about 200 × 100 mm) in the bottom face under the Pi gives access to its network and USB ports without taking the case down.</li>
+</ul>
+
+<h3>4.4 Window</h3>
+<div class="two">
+<div>
+<ul>
+  <li><b>Material:</b> UV-protected polycarbonate, 3/16 in. (4.5 mm), light smoke grey, cut to about 1,075 × 560 mm by
+  <a href="https://www.tapplastics.com/product/plastics/cut_to_size_plastic/polycarbonate_sheets/516">TAP Plastics</a>.
+  For more scratch and graffiti resistance, use their <a href="https://www.tapplastics.com/product/plastics/cut_to_size_plastic/polycarbonate_sheets_ar/517">hard-coated (AR) polycarbonate</a>, which is also UV-enhanced.</li>
+  <li><b>Not acrylic</b>, which is clearer but cracks on impact. <b>Not standard polycarbonate</b>, which yellows in sunlight.</li>
+  <li><b>Floating mount:</b> polycarbonate grows about 4 mm across this width between a cold winter night and a hot summer day.
+  Clamp it between front and rear EPDM gaskets with about 5 mm free at every edge, and drill no holes in it.</li>
+</ul>
+</div>
+<figure style="margin-top:0">
+  <img src="fig-window.svg" style="width:100%">
+  <figcaption><b>Figure 4.</b> Window edge detail. The retainer angle screws to rivnuts in the frame and squeezes the window between two gaskets.</figcaption>
+</figure>
+</div>
+
+<h3>4.5 Cooling and moisture</h3>
+<p>Air rises through the case by itself: in at the bottom, past the PSU and Pi, and out at the top under the hood (Figure 1).</p>
+<table>
+  <tr><th>Heat load</th><th class="n">Airflow for a 10 °C rise</th><th>Approach</th></tr>
+  <tr><td>80 W (normal content)</td><td class="n">14 CFM</td><td>Natural convection through the vents below</td></tr>
+  <tr><td>150 W</td><td class="n">26 CFM</td><td>Natural convection is marginal; add the fan</td></tr>
+  <tr><td>400 W (full white)</td><td class="n">70 CFM</td><td>Fan required. The software avoids this with mostly-black layouts and overnight dimming</td></tr>
+</table>
+<ul>
+  <li><b>Vent area:</b> by the stack effect over a 0.5 m rise, 14 CFM needs about <b>30 in² (200 cm²) of net open area at both top and bottom</b>.
+  Insect mesh roughly halves the open area, so cut about 60 in² of slots in each face: a band of 5 × 60 mm slots, about 65 in each half-skin.</li>
+  <li><b>Rain:</b> the bottom slots face down, so rain cannot enter them. The top slots sit under the hood, which overhangs the front and doubles as a drip edge over the window.</li>
+  <li><b>Mesh:</b> stainless or aluminium insect screen bonded behind every slot band.</li>
+  <li><b>Fan (optional; fit it if testing shows a need):</b> one 120 mm 5 V fan at the top exhaust, run from the 5 V supply through a
+  thermostat switch set to about 40 °C. Alternatively, drive it from the Pi's fan header and let the Pi decide.</li>
+  <li><b>Condensation:</b> the vents keep air moving, so no separate breather is needed. Slope the bottom skin slightly toward the slots so any water drains out.</li>
+  <li>The Pi still needs its own heatsink (see <code>HARDWARE.md</code>); case vents do not replace it.</li>
+</ul>
+
+<h3>4.6 Electrical</h3>
+<ul>
+  <li><b>Earth the case.</b> A metal case on mains power must be bonded to protective earth: a ground lug on the frame, a green/yellow lead to the PSU's earth terminal and the cord's earth conductor, and star washers or masked bare spots wherever powder-coated parts must connect.</li>
+  <li><b>Mains entry</b> through a <a href="https://www.amazon.com/clp/B01MQ5V3JY">PG13.5 nylon cable gland</a> (6 to 12 mm cord) in the bottom face, with a drip loop below it.</li>
+  <li><b>Fuse:</b> keep the inline fuse and switch. Find the fuse rating in the PSU datasheet and label it; it is still marked unknown on the wiring diagram.</li>
+  <li><b>Outlet:</b> a GFCI outlet with an extra-duty in-use cover, for example the <a href="https://www.homedepot.com/p/TAYMAC-N3R-In-Use-Cover-Combo-Extra-Duty-15A-WRTR-SelfTest-GFCI-Outlet-Nonmetallic-1-Gang-Expandable-In-Use-Outlet-Cover-MG500GS/300358640">Taymac MG500GS combo</a>, installed by an electrician.</li>
+  <li>While the case is open, fix the Pi's under-voltage: feed it from the PSU terminals with a dedicated 16 AWG pair (<code>HARDWARE.md</code> §1, <code>docs/wiring-diagram.pdf</code>).</li>
+</ul>
+
+<h2>5. Bill of materials</h2>
+<p class="small">Prices are approximate, from retailer listings in October 2026; check before ordering. Quantities are for one display.</p>
+<table>
+  <thead><tr><th style="width:31%">Item</th><th style="width:15%">Qty</th><th>Source</th><th class="n" style="width:9%">≈ USD</th></tr></thead>
+  <tr><th colspan="4">Mounting</th></tr>
+  <tr><td>Aluminium Z-clip, high-load, MFSTR-050</td><td>≈1.9 m (wall rail 900 mm, case rail 1,000 mm)</td><td><a href="https://www.monarchmetal.com/monarch-z-clips-and-hanging-systems/aluminum-z-clip-high-load-capacity-2-inch-stock-clip-size-1-2-inch-projection-7-16-inch-lift-off-mfstr-050/">Monarch Metal</a> (<a href="https://www.monarchmetal.com/z-clip-selector-tool/">selector</a>)</td><td class="n">40</td></tr>
+  <tr><td>SET-3G epoxy, 8.5 oz cartridge</td><td>2 (1 spare)</td><td><a href="https://www.homedepot.com/p/Simpson-Strong-Tie-SET-3G-8-5-oz-High-Strength-Epoxy-Adhesive-with-1-Nozzle-and-Extension-SET3G10/312947523">Home Depot</a> (<a href="https://www.strongtie.com/epoxyanchoringadhesives_adhesives/set-3g_adhesive/p/set-3g">product page</a>)</td><td class="n">60</td></tr>
+  <tr><td>Dispensing gun for SET-3G (Simpson CDT10S)</td><td>1</td><td><a href="https://griffbuildingsupplies.com/products/simpson-strong-tie-caulking-gun-cdt10s">Griff Building Supplies</a>; a standard caulk gun may stall on epoxy</td><td class="n">25</td></tr>
+  <tr><td>316 stainless threaded rod, 3/8-16 × 3 ft</td><td>1, cut into six 6 in. studs</td><td><a href="https://boltdepot.com/Product-Details?product=23731">Bolt Depot</a></td><td class="n">23</td></tr>
+  <tr><td>316 stainless 3/8-16 nuts and fender washers</td><td>6 + 6</td><td><a href="https://boltdepot.com/Threaded_rod_Stainless_steel_316">Bolt Depot</a>, same order</td><td class="n">12</td></tr>
+  <tr><td>Screen tube 3GWS373P <span class="tag">IF HOLLOW BRICK</span></td><td>6</td><td><a href="https://www.ustoolandsupply.com/3gws373p.html">US Tool &amp; Supply</a></td><td class="n">20</td></tr>
+  <tr><td>Hole-cleaning brush (ETB, sized to the hole) and hand blow-out pump</td><td>1 + 1</td><td><a href="https://www.strongtie.com/miscadhesiveaccessories_adhesiveanchoringaccessories/etb_brush/p/etb">Simpson ETB brushes</a></td><td class="n">20</td></tr>
+  <tr><td>7/16 in. carbide masonry bit (9/16 in. with screen tubes)</td><td>1</td><td>Any hardware store</td><td class="n">12</td></tr>
+  <tr><td>Nylon shoulder washers, 3/8 in.</td><td>12</td><td><a href="https://www.mcmaster.com/products/nylon-sleeve-washers/">McMaster-Carr</a></td><td class="n">10</td></tr>
+  <tr><td>Anti-lift brackets, 2 mm aluminium L</td><td>2</td><td>In the sheet-metal order</td><td class="n">(case)</td></tr>
+  <tr><td>Stainless sleeve anchors, 3/8 in. <span class="tag">FALLBACK ONLY</span></td><td>6</td><td><a href="https://www.albanycountyfasteners.com/38-304-stainless-steel-hex-head-sleeve-anchors/122-004.html">Albany County Fasteners</a> (choose the length for the brick)</td><td class="n">(15)</td></tr>
+  <tr><th colspan="4">Case</th></tr>
+  <tr><td>Sheet-metal parts (Figure 3), 0.080 in. 5052, cut, bent, powder-coated</td><td>1 set</td><td><a href="https://sendcutsend.com/materials/5052-aluminum/">SendCutSend</a> or <a href="https://www.oshcut.com/materialdetails/aluminum-5052-h32">OSH Cut</a></td><td class="n">250 to 450</td></tr>
+  <tr><td>6061-T6 angle, 1 × 1 × 1/8 in.</td><td>≈30 ft</td><td><a href="https://www.onlinemetals.com/en/buy/aluminum/1-x-1-x-0-125-aluminum-angle-6061-t6-extruded-structural/pid/971">OnlineMetals #971</a>, cut to length</td><td class="n">60</td></tr>
+  <tr><td>UV-protected polycarbonate, 3/16 in., light smoke, ≈1,075 × 560 mm</td><td>1</td><td><a href="https://www.tapplastics.com/product/plastics/cut_to_size_plastic/polycarbonate_sheets/516">TAP Plastics</a> (or <a href="https://www.tapplastics.com/product/plastics/cut_to_size_plastic/polycarbonate_sheets_ar/517">AR-coated</a>)</td><td class="n">100 to 200</td></tr>
+  <tr><td>EPDM closed-cell foam tape, 1/8 × 1/2 in. × 65 ft</td><td>1 roll</td><td><a href="https://www.amazon.com/clp/B089GKLW3H">Okayasu Rubber, Amazon</a></td><td class="n">15</td></tr>
+  <tr><td>#10-32 pin-in Torx button-head screws, 18-8 stainless, 1/2 in.</td><td>≈80</td><td><a href="https://www.albanycountyfasteners.com/Torx-Tamper-Proof-Security-Machine-Screw-10-32-p/880000.htm">Albany County Fasteners</a></td><td class="n">30</td></tr>
+  <tr><td>T-25 pin-in Torx driver bit</td><td>2</td><td>Any hardware store (usually sold separately)</td><td class="n">8</td></tr>
+  <tr><td>10-32 rivnuts, aluminium, for 0.080 in. sheet</td><td>≈100</td><td>Industrial supplier (McMaster-Carr, Fastenal)</td><td class="n">25</td></tr>
+  <tr><td>Hand rivnut tool + 10-32 mandrel</td><td>1 + 1</td><td><a href="https://www.amazon.com/Astro-Pneumatic-Thread-Setting-Riveter/dp/B07S6TG3HL">Astro 1442</a>, <a href="https://www.astrotools.com/product/10-32-mandrel-only/">10-32 mandrel</a></td><td class="n">65</td></tr>
+  <tr><td>Frame bolts: 1/4-20 stainless hex bolts, nylon-insert lock nuts, washers</td><td>≈40</td><td>Bolt Depot</td><td class="n">25</td></tr>
+  <tr><td>Insect screen, stainless or aluminium, and outdoor adhesive</td><td>1 small roll</td><td>Hardware store</td><td class="n">15</td></tr>
+  <tr><td>5 V 120 mm fan + thermostat switch <span class="tag">OPTIONAL</span></td><td>1</td><td>Only if the heat test needs it</td><td class="n">(30)</td></tr>
+  <tr><th colspan="4">Electrical</th></tr>
+  <tr><td>PG13.5 nylon cable gland, IP68</td><td>1 pack</td><td><a href="https://www.amazon.com/clp/B01MQ5V3JY">Baomain, Amazon</a></td><td class="n">10</td></tr>
+  <tr><td>Ground lug, green/yellow 14 AWG lead, star washers</td><td>1 set</td><td>Hardware or electrical supplier</td><td class="n">10</td></tr>
+  <tr><td>GFCI outlet + extra-duty in-use cover</td><td>1</td><td><a href="https://www.homedepot.com/p/TAYMAC-N3R-In-Use-Cover-Combo-Extra-Duty-15A-WRTR-SelfTest-GFCI-Outlet-Nonmetallic-1-Gang-Expandable-In-Use-Outlet-Cover-MG500GS/300358640">Taymac MG500GS, Home Depot</a> (electrician installs)</td><td class="n">22</td></tr>
+  <tr><td>16 AWG red/black wire for the Pi feed</td><td>2 m</td><td>Hardware store</td><td class="n">8</td></tr>
+  <tr><th colspan="3">Estimated total, excluding optional and fallback items</th><th class="n">≈ 850 to 1,150</th></tr>
+</table>
+
+<h2>6. Build, test and install</h2>
+<h3>6.1 Build order</h3>
+<ol>
+  <li>Measure the real panel assembly (backplates, panel depth, bracket positions), the PSU and the Pi stack. Weigh the current assembly.</li>
+  <li>Draw the case in CAD from this plan, and produce flat patterns for the Figure 3 parts with slots, rivnut holes and gussets.</li>
+  <li>Order the sheet metal, angle, window and hardware. Cut and drill the angle, and bolt up the frame square (check the diagonals).</li>
+  <li>Set the rivnuts; fit the panel backplates and electronics tray; route ribbons and power; fit gaskets and skins.</li>
+  <li>Fit the window between its gaskets and retainers, then the hood and the case Z-rail.</li>
+</ol>
+
+<h3>6.2 Tests before it goes on the wall</h3>
+<table>
+  <tr><th style="width:16%">Test</th><th>Method</th><th style="width:30%">Pass</th></tr>
+  <tr><td>Earth continuity</td><td>Meter from the plug's earth pin to every skin, the frame and the hood</td><td>Below 1 Ω everywhere</td></tr>
+  <tr><td>Water</td><td>Garden hose at shower strength on the top, sides and window for 10 minutes, the way rain would hit it</td><td>No water inside; the bottom slots drain</td></tr>
+  <tr><td>Heat soak</td><td>Closed case: full white for 30 minutes, then the normal board for 2 hours; log <code>vcgencmd measure_temp</code> and an internal thermometer</td><td>Pi below 75 °C and air inside below 50 °C; otherwise fit the fan</td></tr>
+  <tr><td>Power</td><td>White-screen test with <code>vcgencmd pmic_read_adc EXT5V_V</code> and <code>vcgencmd get_throttled</code></td><td>Pi at 5.0 V or above; throttled reads <code>0x0</code></td></tr>
+  <tr><td>Hang</td><td>Rail on a test wall or bench fixture; hang the case and add load to 2× its weight for 10 minutes</td><td>No movement or deformation</td></tr>
+</table>
+
+<h3>6.3 Maintenance</h3>
+<ul>
+  <li>Two people lift the case off the rail after removing the two anti-lift screws, and open the back on a bench.</li>
+  <li>Network and quick checks go through the bottom hatch without taking the case down.</li>
+  <li>Every spring: clean the window with mild soap only (no ammonia or solvents on polycarbonate), clear the mesh, and check anchors and gaskets.</li>
+</ul>
+
+<h2>7. Open questions</h2>
+<ul class="check">
+  <li>SEPTA approval: who signs off, and do they require their own contractor or a stamped design?</li>
+  <li>Exact location: under the canopy or exposed; mounting height; distance to an outlet; is there a GFCI outlet already?</li>
+  <li>Wall: solid or cored brick; mortar condition; anchors in brick or in mortar joints (test hole)</li>
+  <li>Measured weight of the current assembly (replaces the 60 lb estimate)</li>
+  <li>Measured panel assembly depth and PSU dimensions (sets the 120 mm case depth)</li>
+  <li>Fuse rating from the PSU datasheet</li>
+  <li>Who installs the mains wiring and lifts the case: SEPTA facilities, Swarthmore facilities, or a contractor</li>
+</ul>
+
+<h2>References</h2>
+<ul class="small">
+  <li>Carretta and Fettig, <i>High-Fidelity Swarthmore SEPTA Station Display</i>, ENGR 090 final report, May 2026 (power architecture, panel measurements).</li>
+  <li><code>HARDWARE.md</code> and <code>docs/wiring-diagram.pdf</code> in github.com/BenGreenberg07/septa-tracker (power faults, as-built wiring).</li>
+  <li>Monarch Metal, <a href="https://www.monarchmetal.com/resources/monarch-hanging-systems-overview/">hanging systems overview</a> and <a href="https://www.monarchmetal.com/z-clip-selector-tool/">Z-clip selector</a>.</li>
+  <li>Simpson Strong-Tie, <a href="https://www.strongtie.com/epoxyanchoringadhesives_adhesives/set-3g_adhesive/p/set-3g">SET-3G</a>; ICC-ES <a href="https://icc-es.org/wp-content/uploads/report-directory/ESR-4144.pdf">ESR-4144</a> (Hilti HIT-HY 270 in masonry).</li>
+  <li>SendCutSend, <a href="https://sendcutsend.com/materials/processing-min-max/">minimum and maximum part sizes</a>; TAP Plastics, <a href="https://www.tapplastics.com/custom-cut-to-size-plastic-sheets/polycarbonate-sheets">polycarbonate</a>.</li>
+</ul>
+
+</body>
+</html>
