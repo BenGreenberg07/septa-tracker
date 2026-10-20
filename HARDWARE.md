@@ -1,6 +1,12 @@
 # Hardware notes: known faults, what to buy, and why
 
 Findings from the lab session on 2026-09-21, with the evidence behind each one.
+
+**Wiring diagram:** [`docs/wiring-diagram.pdf`](docs/wiring-diagram.pdf) (also
+`.png` and `.svg`), the as-built system: mains, PSU, distribution block, the Pi
+feed, and both 8-panel chains. It is drawn by `rpi5/tools/make-wiring-diagram.py`;
+after any rewire, edit that script and re-run it with
+`/opt/homebrew/bin/python3 rpi5/tools/make-wiring-diagram.py`.
 Raw temperature and voltage readings are in `~/septa-temp-log.csv` on the Pi.
 
 ---
