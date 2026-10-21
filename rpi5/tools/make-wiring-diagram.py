@@ -33,6 +33,7 @@ GPIO = "#777777"
 INK = "#222222"
 FAINT = "#9a9a9a"
 PANEL_FILL = "#f4f4f4"
+RATING = "#6a3d9a"    # electrical ratings
 
 fig = plt.figure(figsize=(17, 11))
 ax = fig.add_axes([0, 0, 1, 1])
@@ -82,6 +83,13 @@ def text(x, y, s, size=7, ha="left", va="center", color=INK, weight="normal"):
             weight=weight, zorder=6)
 
 
+def rating(x, y, s, size=5.6, ha="left", va="center"):
+    """A voltage / current label, boxed so it reads over wires."""
+    ax.text(x, y, s, fontsize=size * FONT_SCALE, ha=ha, va=va, color=RATING,
+            weight="bold", zorder=7, linespacing=1.15,
+            bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"))
+
+
 def pair(points, offset=0.55):
     """A +5 V / GND pair: the 0 V conductor drawn just beside the +5 V one."""
     wire(points, V5, lw=1.5)
@@ -107,7 +115,7 @@ FONT_SCALE = 1.18
 
 # -------------------------------------------------------------- mains + PSU
 
-box(8, 96, 26, 7, "WALL OUTLET\n120 V AC, single", size=7.5)
+box(8, 96, 26, 7, "WALL OUTLET\n120 V AC, 60 Hz", size=7.5)
 xL, xN, xPE = 13, 21, 29
 for x, c, lab in ((xL, L_COL, "L"), (xN, N_COL, "N"), (xPE, PE_COL, "PE")):
     text(x + 0.8, 94.3, lab, size=6.5, color=c, weight="bold")
@@ -122,17 +130,19 @@ dot(xL, 83, INK)
 wire([(xL, 83), (xL + 2.6, 80.2)], INK, lw=1.2)
 dot(xL, 79.5, INK)
 text(xL - 1.8, 81.2, "S1\nswitch", size=6, ha="right")
+rating(xL + 1.0, 92.2, "0.9 A typ\n4.1 A max", size=5.3)
 wire([(xL, 79.5), (xL, 76)], L_COL)
 wire([(xN, 96), (xN, 76)], N_COL)
 wire([(xPE, 96), (xPE, 76)], PE_COL, ls=(0, (4, 2)))
 
 box(7, 52, 28, 24, None, lw=1.6)
 text(21, 68.5, "PSU", size=11, ha="center", weight="bold")
-text(21, 63.8, "5 V DC, 100 A\nswitching supply", size=7.5, ha="center")
+text(21, 63.8, "5 V DC, 100 A, 500 W\nswitching supply", size=7.5, ha="center")
 for x, lab in ((xL, "L"), (xN, "N"), (xPE, "PE")):
     box(x - 1.3, 74, 2.6, 2, None, lw=0.8)
     text(x, 72.6, lab, size=6, ha="center")
-text(21, 56, "AC in (top)   DC out (right)", size=6, ha="center", color=FAINT)
+rating(21, 59.6, "in 120 V AC, 4.1 A max\nout 5 V DC, 83 A max", size=5.6, ha="center")
+text(21, 54.6, "AC in (top)   DC out (right)", size=6, ha="center", color=FAINT)
 
 box(33.7, 63, 2.6, 2.4, None, lw=0.8, fill="#ffe5e5")
 box(33.7, 58, 2.6, 2.4, None, lw=0.8, fill="#e8e8e8")
@@ -152,7 +162,8 @@ text(DX + 9.3, DY + 0.9, "0 V", size=5.5, ha="center")
 
 wire([(36.3, 64.2), (DX + 2.5, 64.2)], V5, lw=2.4)
 wire([(36.3, 59.2), (44, 59.2), (44, 57), (DX + 8.5, 57)], GND, lw=2.0)
-text(41, 65.6, "main feed", size=6, ha="center", color=FAINT)
+text(42.5, 65.6, "main feed", size=6, ha="center", color=FAINT)
+rating(42.5, 61.7, "17 A typ\n83 A max", size=5.6, ha="center")
 
 
 # ------------------------------------------------------------ Pi + bonnet
@@ -171,6 +182,7 @@ for dy in (0, 1.0):
     wire([(PI[0] + PI[2], 91 + dy), (BN[0], 91 + dy)], GPIO, lw=1.0)
 text((PI[0] + PI[2] + BN[0]) / 2, 94.6, "40-pin\nGPIO", size=5.5, ha="center", color=GPIO)
 text((PI[0] + PI[2] + BN[0]) / 2, 88.6, "+5 V,\nGND", size=5, ha="center", color=GPIO)
+rating((PI[0] + PI[2] + BN[0]) / 2, 85.4, "3.3 V\nlogic", size=5, ha="center")
 
 OUTS = {1: 91.5, 2: 88.0, 3: 84.5}
 for n, y in OUTS.items():
@@ -189,6 +201,7 @@ wire([(DX + 10.1, DY + DH), (DX + 10.1, 78.2), (BN[0] + 7.6, 78.2), (BN[0] + 7.6
 dot(DX + 4.1, DY + DH, V5)
 dot(DX + 10.1, DY + DH, GND)
 text(DX + 3.4, 78.0, "Pi feed\n(note 3)", size=5.8, ha="right", color=V5)
+rating(DX - 2.4, 78.0, "5 V, 3 A max\n4.64 V meas.", size=5.4, ha="right")
 
 
 # -------------------------------------------------------------- panel array
@@ -217,6 +230,7 @@ def panel(r, c):
     rotated = r in (1, 3)
     box(x, y, PW, PH, None, lw=1.1, fill=PANEL_FILL)
     text(x + PW / 2, y + PH / 2 + 1.0, f"P{num[(r, c)]}", size=8.5, ha="center", weight="bold")
+    rating(x + PW / 2, y + 1.0, "5 V · 1 A typ / 5 A max", size=4.6, ha="center")
     text(x + PW / 2, y + PH / 2 - 1.5, "64×32 HUB75" + ("  ↻180°" if rotated else ""),
          size=5.2, ha="center", color="#555555")
     cy = y + PH / 2
@@ -251,6 +265,7 @@ for r in range(4):
         dot(px - 0.6, bus_y, V5)
         dot(px + 0.6, bus_y - 0.55, GND)
     text(COLS[0] + 0.6, bus_y + 1.0, f"branch {r + 1}", size=5.5, color=V5)
+    rating(COLS[0] + 7.0, bus_y + 1.0, "5 V · 4 panels · 4 A typ / 20 A max · 100 W", size=5.3)
 
 # Data: bonnet outputs to the head of each chain, then panel to panel.
 for name, (port, rows) in CHAINS.items():
@@ -289,7 +304,7 @@ text(5, 26.4, "LEGEND", size=6.8, weight="bold")
 items = [
     (5, 24.2, V5, "-", "+5 V DC"),
     (21, 24.2, GND, "-", "0 V / GND"),
-    (38, 24.2, DATA, "-", "HUB75 ribbon, arrow = data direction"),
+    (38, 24.2, DATA, "-", "HUB75 ribbon, 5 V logic, arrow = data direction"),
     (80, 24.2, GPIO, "-", "stacked 40-pin header"),
     (5, 22.0, L_COL, "-", "mains line (L)"),
     (21, 22.0, N_COL, "-", "mains neutral (N)"),
@@ -300,13 +315,16 @@ for x0, y, c, ls, lab in items:
     text(x0 + 4.4, y, lab, size=5.9)
 dot(81.8, 22.0, INK)
 text(84.4, 22.0, "junction", size=5.9)
+ax.text(96, 24.2, "5 V · 20 A", fontsize=5.6, ha="left", va="center", color=RATING,
+        weight="bold", bbox=dict(boxstyle="square,pad=0.15", fc="white", ec=RATING, lw=0.5))
+text(103.6, 24.2, "rating (see table)", size=5.9)
 
 
 # -------------------------------------------------------------------- notes
 
 text(5, 19.4, "NOTES", size=6.8, weight="bold")
 notes = [
-    "1  Load: about 1 A per panel typical, 5 A at full white (E90 measurement). 16 panels → 80 A worst case, about 400 W. PSU rated 100 A.",
+    "1  Load: about 1 A per panel typical, 5 A at full white (E90 measurement). 16 panels → 80 A worst case, about 400 W. PSU rated 100 A. See ratings table.",
     "2  One wall outlet. Mains passes through F1 and S1 in the PSU cord. The fuse rating was not recorded; label it when found.",
     "3  The Pi takes 5 V from the PSU through wires soldered to the bonnet's power input, then the 40-pin header. Its USB-C input is unused.",
     "    Measured 4.64 V at the Pi under full white (under-voltage limit 4.63 V). Fix: dedicated 16 AWG pair from the PSU terminals; see HARDWARE.md §1.",
@@ -319,6 +337,39 @@ notes = [
 ]
 for i, s_ in enumerate(notes):
     text(5, 17.6 - i * 1.5, s_, size=5.6)
+
+
+# ------------------------------------------------------------ ratings table
+
+# typ = ordinary board content (about 1 A per panel), max = every pixel white.
+# Mains current assumes 85 % PSU efficiency; the Pi peak is with no USB load.
+RX, RY = 70, 20.4
+COLX = (0, 15.2, 25.2, 31.0, 37.6, 43.0)
+text(RX, RY, "ELECTRICAL RATINGS", size=6.8, weight="bold")
+rows = [
+    ("Circuit", "Voltage", "Typ", "Max", "Power", "Wire*"),
+    ("Mains in, L / N", "120 V AC, 60 Hz", "0.9 A", "4.1 A", "490 W", "14 AWG"),
+    ("PSU output (rated)", "5.0 V DC", "", "100 A", "500 W", "terminals"),
+    ("Main feed, PSU → block", "5 V DC", "17 A", "83 A", "415 W", "4 AWG"),
+    ("Each branch, 4 panels", "5 V DC", "4 A", "20 A", "100 W", "12 AWG"),
+    ("Each panel", "5 V DC", "1 A", "5 A", "25 W", "panel lead"),
+    ("Pi + bonnet feed", "5 V (4.64 meas.)", "1 A", "3 A", "15 W", "16 AWG"),
+    ("GPIO, Pi → bonnet", "3.3 V logic", "", "", "", "header"),
+    ("HUB75 ribbons", "5 V logic", "", "", "", "16-way IDC"),
+]
+for i, row in enumerate(rows):
+    y = RY - 2.0 - i * 1.42
+    for j, (cx, cell) in enumerate(zip(COLX, row)):
+        text(RX + cx, y, cell, size=5.4, weight="bold" if i == 0 else "normal",
+             color=INK if (i == 0 or j == 0) else RATING)
+    if i == 0:
+        wire([(RX, y - 0.75), (RX + 48, y - 0.75)], INK, lw=0.5)
+text(RX, RY - 2.0 - len(rows) * 1.42 + 0.15,
+     "typ = normal board, max = all white. Mains at 85 % PSU efficiency. Under-voltage at 4.63 V.",
+     size=4.8, color="#555555")
+text(RX, RY - 2.0 - len(rows) * 1.42 - 1.15,
+     "* Recommended minimum copper for runs under 1 m; as-built gauges not yet verified (note 6).",
+     size=4.8, color="#555555")
 
 
 # -------------------------------------------------------------- title block
@@ -335,8 +386,8 @@ text(TX + 1.2, TY + 14.0, "Advisor: Prof. E. Masroor   ·   Swarthmore College E
 text(TX + 1.2, TY + 11.2, "Maintainer / drawn by: B. Greenberg", size=6.0)
 text(TX + 1.2, TY + 9.8, "github.com/BenGreenberg07/septa-tracker", size=5.6, color="#555555")
 for x, y, k, v in (
-    (TX + 1.2, TY + 6.7, "DATE", "2026-10-20"),
-    (TX + 25.2, TY + 6.7, "REV", "A"),
+    (TX + 1.2, TY + 6.7, "DATE", "2026-10-21"),
+    (TX + 25.2, TY + 6.7, "REV", "B"),
     (TX + 1.2, TY + 2.3, "SCALE", "None (schematic)"),
     (TX + 25.2, TY + 2.3, "SHEET", "1 of 1"),
 ):
