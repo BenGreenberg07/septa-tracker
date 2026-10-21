@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Simple Case Build Guide: SEPTA Swarthmore Station Display</title>
+<style>
+  @page { size: Letter; margin: 0.55in 0.6in 0.6in 0.6in; }
+  :root { --ink:#1d1d1f; --muted:#5f6368; --rule:#dde0e5; --accent:#f28c28; --accent-d:#c56a12;
+          --tint:#f5f6f8; --warn:#b3261e; --info:#1a5fb4; --ok:#2d6a3e; }
+  * { box-sizing: border-box; }
+  body { font: 10pt/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); margin: 0; }
+  h1 { font-size: 30pt; line-height: 1.05; margin: 0; letter-spacing: -0.02em; }
+  h2 { font-size: 15pt; margin: 0 0 8pt; padding-bottom: 4pt; border-bottom: 2pt solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 7pt; padding-left: 17pt; }
+  li { margin: 0 0 3pt; }
+  a { color: var(--info); text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.8pt; }
+  thead { display: table-header-group; }
+  th, td { text-align: left; vertical-align: top; padding: 3.5pt 5pt; border-bottom: 0.6pt solid var(--rule); }
+  th { background: var(--tint); font-weight: 600; border-bottom: 1pt solid #b9bec6; }
+  tr { break-inside: avoid; }
+  .n { text-align: right; white-space: nowrap; }
+  .pb { break-before: page; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.6pt; }
+  code { font: 8.6pt "SF Mono", Menlo, monospace; background: var(--tint); padding: 0 2pt; }
+
+  .kicker { font-size: 9pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-d); margin-bottom: 6pt; }
+  .lede { font-size: 12pt; color: var(--muted); margin: 8pt 0 12pt; max-width: 34em; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; margin: 10pt 0 12pt; }
+  .stat { background: var(--tint); border-radius: 6pt; padding: 8pt 10pt; }
+  .stat b { display: block; font-size: 17pt; line-height: 1.1; }
+  .stat span { font-size: 8pt; line-height: 1.3; color: var(--muted); display: block; margin-top: 3pt; }
+  .hero { text-align: center; margin: 4pt 0 6pt; }
+  .hero img { width: 90%; }
+
+  .callout { border-radius: 5pt; padding: 7pt 10pt; margin: 8pt 0; break-inside: avoid; font-size: 9.3pt; }
+  .callout b.t { display: block; margin-bottom: 2pt; }
+  .warn { background: #fbf1f0; border-left: 3.5pt solid var(--warn); }
+  .tip { background: #eef6f0; border-left: 3.5pt solid var(--ok); }
+  .info { background: #eef4fb; border-left: 3.5pt solid var(--info); }
+
+  .step { break-inside: auto; margin: 0 0 14pt; border: 1pt solid var(--rule); border-radius: 8pt; overflow: hidden; }
+  .step-head { break-after: avoid; display: flex; align-items: center; gap: 10pt; background: var(--tint); padding: 7pt 10pt; border-bottom: 1pt solid var(--rule); }
+  .num { flex: none; width: 26pt; height: 26pt; border-radius: 13pt; background: var(--accent); color: white; font-weight: 800; font-size: 13pt; display: flex; align-items: center; justify-content: center; }
+  .step-head .title { font-size: 12.5pt; font-weight: 700; flex: 1; }
+  .time { font-size: 8.5pt; color: var(--muted); white-space: nowrap; }
+  .step-body { padding: 8pt 11pt 6pt; }
+  .step-top { break-inside: avoid; }
+  .step-body.top { padding-bottom: 0; }
+  .step.nofig { break-inside: avoid; }
+  .step ol, .step .callout, .step table { break-inside: avoid; }
+  .need { display: flex; flex-wrap: wrap; gap: 4pt; margin: 0 0 7pt; }
+  .need span { font-size: 7.8pt; background: white; border: 0.8pt solid #cfd4db; border-radius: 10pt; padding: 1pt 6pt; }
+  .need span.tool { border-color: #b8c7e0; background: #f3f7fd; }
+  .fig { text-align: center; margin: 2pt 0 8pt; }
+  .fig img { max-width: 100%; }
+  .step ol li::marker { font-weight: 700; color: var(--accent-d); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; align-items: start; }
+
+  .ws td { height: 19pt; }
+  .ws td.blank { border-bottom: 1pt solid #888; width: 20%; }
+  .check { padding-left: 0; }
+  .check li { list-style: none; padding-left: 15pt; text-indent: -15pt; }
+  .check li::before { content: "\2610\00a0\00a0"; }
+  .total td { font-weight: 700; background: #fff4e8; }
+  .excluded td { color: var(--muted); }
+  .legend { font-size: 8pt; color: var(--muted); margin: -2pt 0 8pt; }
+  .legend span { display: inline-block; margin-right: 10pt; }
+  .legend i { display: inline-block; width: 9pt; height: 9pt; border-radius: 9pt; vertical-align: -1pt; margin-right: 3pt; border: 0.8pt solid #cfd4db; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<div class="kicker">SEPTA Swarthmore Station Display</div>
+<h1>Simple Case<br>Build Guide</h1>
+<p class="lede">The quickest, cheapest way to get the board weatherproofed and on the wall: an aluminium-panel box you can build
+with a drill, a utility knife and a rivet tool, using the plastic sheet you already have as the window.</p>
+
+<div class="stats">
+  <div class="stat"><b>≈ $161</b><span>parts, not counting aluminium or a new window sheet</span></div>
+  <div class="stat"><b>≈ 10 h</b><span>build time, about two afternoons</span></div>
+  <div class="stat"><b>Easy</b><span>drill, utility knife, rivet tool, caulk gun</span></div>
+  <div class="stat"><b>2 people</b><span>to hang it (about 50 lb)</span></div>
+</div>
+
+<div class="hero"><img src="fig-overview.svg"></div>
+
+<div class="callout warn"><b class="t">Before you drill the station</b>The building belongs to SEPTA, so mounting needs their written OK
+first, and they may want their own crew to do the drilling or the mains connection. The outlet is an electrician's job. Everything
+else in this guide is a normal workshop job.</div>
+
+<!-- ============================================================ HOW IT WORKS -->
+<h2 class="pb">How it works</h2>
+<div>
+<p>The case is a shallow box made of <b>aluminium composite panel (ACM)</b>: two thin aluminium skins with a plastic core, the
+material most outdoor signs are made of. It cuts with a utility knife and holds rivets well.</p>
+<ul>
+  <li><b>Box:</b> four ACM strips form the rim, joined at the corners with short pieces of aluminium angle and pop rivets.
+  An ACM back is riveted on and sealed, and stays on for good.</li>
+  <li><b>Window:</b> your existing plastic sheet sits on foam tape and is held by a <b>clamp frame</b> of aluminium angle,
+  screwed into rubber <b>well nuts</b>. Removing those screws is how you open the case.</li>
+  <li><b>Inside:</b> the LED panels bolt to two rails across the top and bottom. The PSU and Pi screw to the back.</li>
+  <li><b>Air:</b> vent windows in the bottom and top let warm air rise straight through. The station canopy keeps rain
+  off, so there is no hood.</li>
+  <li><b>Wall:</b> a 30 in. aluminium <b>Z-bar cleat</b> (one half on the wall, one on the case) carries the weight. Two small
+  <b>anti-lift brackets</b> at the bottom stop anyone lifting it off.</li>
+</ul>
+</div>
+<div class="fig"><img src="fig-mounted.svg" style="width:78%"></div>
+<h3>What it leaves out, on purpose</h3>
+<p class="muted">No custom metalwork, no epoxy anchors, no powder coating, no fan, no rain hood (it hangs under the canopy). If it ever moves
+somewhere exposed, screw a strip of aluminium drip edge over the top vents on 1/2 in. spacers. If it runs hot in summer, or the
+brick turns out to be soft, the full plan (<code>docs/mounting-and-case-plan.pdf</code>) has the heavier-duty version of each part.</p>
+
+<!-- ============================================================ MEASURE -->
+<h2 class="pb">Before you buy: measure</h2>
+<p>Every size in this guide comes from your plastic sheet. The example numbers are for a <b>44 × 24 in.</b> sheet; fill in your own.</p>
+<table class="ws">
+  <thead><tr><th style="width:44%">Measure</th><th>Example</th><th>Yours</th><th>Why</th></tr></thead>
+  <tr><td><b>W</b>: plastic sheet width</td><td>44 in.</td><td class="blank"></td><td>Sets the case width</td></tr>
+  <tr><td><b>H</b>: plastic sheet height</td><td>24 in.</td><td class="blank"></td><td>Sets the case height</td></tr>
+  <tr><td>Panel array width (all 16 panels, edge to edge)</td><td>40.3 in.</td><td class="blank"></td><td>At least 2 in. less than W</td></tr>
+  <tr><td>Panel array height</td><td>20.2 in.</td><td class="blank"></td><td>At least 2 in. less than H</td></tr>
+  <tr><td>Panel array depth, LED face to back of the backplate brackets</td><td>about 1 in.</td><td class="blank"></td><td>Sets where the rails go</td></tr>
+  <tr><td>PSU size</td><td>about 8.5 × 4.5 × 2 in.</td><td class="blank"></td><td>Must fit behind the panels</td></tr>
+  <tr><td>Weight of the board as it is now (bathroom scale)</td><td>about 30 lb</td><td class="blank"></td><td>The case adds about 20 lb</td></tr>
+</table>
+<div class="callout info"><b class="t">If the sheet is too small</b>The clamp frame covers 1 in. all round, so the sheet must be at least
+2 in. bigger than the panel array each way, or the frame hides LEDs. If it isn't, order a new sheet cut to the array size plus 3 in.
+each way. It is in the shopping list but not counted in the total.</div>
+
+<h3>Cut sizes from your measurements</h3>
+<table>
+  <thead><tr><th style="width:44%">Part</th><th>Formula</th><th class="n">Example (in.)</th><th class="n">Yours</th></tr></thead>
+  <tr><td>Back (ACM)</td><td>W × H</td><td class="n">44 × 24</td><td></td></tr>
+  <tr><td>Top and bottom strips (ACM) ×2</td><td>W × 4-1/2</td><td class="n">44 × 4-1/2</td><td></td></tr>
+  <tr><td>Side strips (ACM) ×2</td><td>(H − 1/4) × 4-1/2</td><td class="n">23-3/4 × 4-1/2</td><td></td></tr>
+  <tr><td>Back-edge angles, top and bottom ×2</td><td>W − 2</td><td class="n">42</td><td></td></tr>
+  <tr><td>Back-edge angles, sides ×2</td><td>H − 2-1/4</td><td class="n">21-3/4</td><td></td></tr>
+  <tr><td>Corner angles ×4</td><td>3</td><td class="n">3</td><td></td></tr>
+  <tr><td>Clamp frame, top and bottom ×2</td><td>W</td><td class="n">44</td><td></td></tr>
+  <tr><td>Clamp frame, sides ×2</td><td>H − 2</td><td class="n">22</td><td></td></tr>
+  <tr><td>Panel rails ×2 (thick angle)</td><td>W − 1/2</td><td class="n">43-1/2</td><td></td></tr>
+  <tr><td>Cleat backing bar (thick angle)</td><td>32</td><td class="n">32</td><td></td></tr>
+  <tr><td>Anti-lift brackets ×2 (thick angle)</td><td>2</td><td class="n">2</td><td></td></tr>
+</table>
+
+<!-- ============================================================ SHOPPING -->
+<h2 class="pb">Shopping list</h2>
+<p class="small muted">Prices from retailer listings in October 2026; check before ordering. The total counts parts only. Aluminium
+stock and a new window sheet are listed so nothing is forgotten, but are <b>not counted</b>.</p>
+
+<h3>Parts (counted)</h3>
+<table>
+  <thead><tr><th style="width:42%">Item</th><th style="width:9%">Qty</th><th>Where</th><th class="n" style="width:7%">≈ $</th></tr></thead>
+  <tr><td>Z-bar cleat, 30 in. aluminium, rated 300 lb (Hangman HM-30D)</td><td>1</td><td><a href="https://www.homedepot.com/p/SIMPLE-MOUNT-30-in-Heavy-Duty-Mirror-and-Picture-Hanger-HM-30D/205948397">Home Depot</a></td><td class="n">14</td></tr>
+  <tr><td>Stainless sleeve anchors, 1/4 in., about 2-1/4 in. long</td><td>6</td><td><a href="https://www.homedepot.com/b/Hardware-Fasteners-Anchors/Stainless-Steel/Sleeve-Anchors/N-5yc1vZc2e5Z1z187dwZ1z1r7cs">Home Depot, stainless sleeve anchors</a></td><td class="n">12</td></tr>
+  <tr><td>Aluminium pop rivets, 3/16 in., grip range, 50-pack</td><td>2</td><td><a href="https://www.homedepot.com/p/Arrow-3-16-in-x-1-2-in-Aluminum-Grip-Range-Rivets-50-Pack-RLA3-16IP/100204004">Arrow RLA3/16IP, Home Depot</a></td><td class="n">16</td></tr>
+  <tr><td>Clear outdoor silicone, 10.1 oz</td><td>1</td><td><a href="https://www.homedepot.com/p/GE-Advanced-Silicone-2-Caulk-10-1-oz-Window-and-Door-Sealant-Clear-2811092/317743902">GE Silicone 2, Home Depot</a></td><td class="n">11</td></tr>
+  <tr><td>Rubber well nuts, #10-32</td><td>14</td><td><a href="https://boltdepot.com/Product-Details?product=21655">Bolt Depot</a></td><td class="n">26</td></tr>
+  <tr><td>Pin-in Torx security screws, #10-32 × 1/2 in., stainless, 25-pack</td><td>1</td><td><a href="https://www.albanycountyfasteners.com/Torx-Tamper-Proof-Security-Machine-Screw-10-32-p/880000.htm">Albany County Fasteners</a></td><td class="n">20</td></tr>
+  <tr><td>EPDM foam tape, 1/8 × 1/2 in. × 65 ft</td><td>1</td><td><a href="https://www.amazon.com/clp/B089GKLW3H">Okayasu, Amazon</a></td><td class="n">15</td></tr>
+  <tr><td>Cable gland, PG13.5 nylon (pack)</td><td>1</td><td><a href="https://www.amazon.com/clp/B01MQ5V3JY">Baomain, Amazon</a></td><td class="n">10</td></tr>
+  <tr><td>Nylon M2.5 standoff kit (for the Pi)</td><td>1</td><td>Amazon, search "M2.5 nylon standoff kit"</td><td class="n">9</td></tr>
+  <tr><td>Stainless fasteners: M4 × 10 mm screws ×4 (PSU); #10-32 × 3/4 in. screws, nylon lock nuts and washers, about 15 each</td><td>1 set</td><td>Home Depot, Everbilt stainless drawers</td><td class="n">12</td></tr>
+  <tr><td>Aluminium insect screen, a repair patch or offcut (about 2 sq ft)</td><td>1</td><td>Hardware store</td><td class="n">6</td></tr>
+  <tr><td>Green 14 AWG wire (2 ft) and two ring terminals</td><td>1 set</td><td>Hardware store</td><td class="n">6</td></tr>
+  <tr><td>Nylon washers, 1/4 in. (keep stainless off aluminium)</td><td>10</td><td>Hardware store</td><td class="n">4</td></tr>
+  <tr class="total"><td colspan="3">Parts total</td><td class="n">≈ 161</td></tr>
+</table>
+
+<h3>Tools (borrow from the engineering shop if you can)</h3>
+<table>
+  <thead><tr><th style="width:42%">Tool</th><th>Used for</th><th class="n" style="width:14%">≈ $ if bought</th></tr></thead>
+  <tr><td>Drill; 3/16, 3/8 and 1/2 in. bits; 1/4 in. masonry bit</td><td>rivets, well nuts, vent corners, wall anchors</td><td class="n">6 (masonry bit)</td></tr>
+  <tr><td>Hand rivet tool (Arrow RT100M or similar)</td><td>every joint</td><td class="n">22</td></tr>
+  <tr><td>Utility knife, fresh blades, metal straightedge, 2 clamps</td><td>cutting the ACM</td><td class="n">8</td></tr>
+  <tr><td>Jigsaw with a metal-cutting blade</td><td>vent windows</td><td class="n">7 (blades)</td></tr>
+  <tr><td>Hacksaw or mitre saw with a non-ferrous blade; file</td><td>cutting the angle, deburring</td><td class="n">shop</td></tr>
+  <tr><td>T-25 pin-in Torx bit</td><td>security screws</td><td class="n">6</td></tr>
+  <tr><td>Caulk gun, tape measure, square, level, marker</td><td>sealing, layout</td><td class="n">5</td></tr>
+</table>
+<p class="small muted">If every tool has to be bought, add about $54, which brings the whole job to about $215.</p>
+
+<h3>Aluminium and window (listed, not counted)</h3>
+<table class="excluded">
+  <thead><tr><th style="width:42%">Item</th><th style="width:9%">Qty</th><th>Where</th><th class="n" style="width:7%">≈ $</th></tr></thead>
+  <tr><td>ACM, 3 mm, 24 × 48 in., white/black faces, 4-pack (uses 2)</td><td>1</td><td><a href="https://beyondledtechnology.com/products/24-x-48-double-sided-acm-3mm-white-black-aluminum-composite-panel-with-0-21mm-aluminum-faces">Beyond LED Technology</a> or <a href="https://www.amazon.com/Aluminum-Composite-Sign-Panel-Sheet/dp/B00PUVEA5K">Amazon</a></td><td class="n">48</td></tr>
+  <tr><td>Aluminium angle, 1 × 1 × 1/16 in., 8 ft</td><td>4</td><td><a href="https://www.homedepot.com/p/Everbilt-1-in-x-96-in-Aluminum-Angle-with-1-16-in-Thick-800057/204325583">Everbilt 800057, Home Depot</a></td><td class="n">86</td></tr>
+  <tr><td>Aluminium angle, 1-1/2 × 1-1/2 × 1/8 in., 8 ft</td><td>1</td><td><a href="https://www.homedepot.com/p/Everbilt-1-1-2-in-x-96-in-Aluminum-Angle-Bar-with-1-8-in-Thick-802617/204273956">Everbilt 802617, Home Depot</a></td><td class="n">52</td></tr>
+  <tr><td>Aluminium angle, 1-1/2 × 1-1/2 × 1/8 in., 4 ft</td><td>1</td><td>Everbilt 6416, Home Depot</td><td class="n">32</td></tr>
+  <tr><td>New window sheet, UV-protected polycarbonate (only if the old one is too small or damaged)</td><td>1</td><td><a href="https://www.tapplastics.com/product/plastics/cut_to_size_plastic/polycarbonate_sheets/516">TAP Plastics, cut to size</a></td><td class="n">100 to 200</td></tr>
+</table>
+
+<!-- ============================================================ STEPS -->
+<h2 style="margin-top:18pt">The build</h2>
+<p>Fifteen steps. In every picture, <b style="color:#c56a12">orange</b> is what that step adds. Work on a big table with a blanket
+on it so the ACM faces do not scratch.</p>
+<div class="legend"><span><i style="background:white"></i>parts</span><span><i style="background:#f3f7fd;border-color:#b8c7e0"></i>tools</span></div>
+<div class="callout tip"><b class="t">Two habits that save the whole build</b>Label every part with masking tape as you cut it. And
+dry-fit (hold it together with clamps) before you drill anything you cannot undo.</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">1</div><div class="title">Mark the ACM</div><div class="time">20 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>2 ACM sheets</span><span class="tool">tape measure</span><span class="tool">square</span><span class="tool">marker</span></div>
+    <div class="fig"><img src="fig-cutlist.svg" style="width:90%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Leave the protective film on, and mark on the film.</li>
+      <li>Sheet 1: mark the back, <b>W × H</b>, in one corner.</li>
+      <li>Sheet 2: mark four strips <b>4-1/2 in.</b> wide along the 48 in. length.</li>
+      <li>Pick which face goes outside (black looks best around a screen) and write "OUT" on every piece.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">2</div><div class="title">Cut the ACM: score and snap</div><div class="time">45 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>marked ACM</span><span class="tool">utility knife, fresh blades</span><span class="tool">metal straightedge</span><span class="tool">2 clamps</span><span class="tool">file</span></div>
+    <div class="fig"><img src="fig-score-snap.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Clamp the straightedge on the line. Score <b>4 to 5 light passes</b>, until you are through the top skin into the black core.</li>
+      <li>Slide the sheet so the line sits on the table edge, scored side up. Press the overhang down firmly: it cracks along the line.</li>
+      <li>Cut the bottom skin in the crease with the knife, then file the edges smooth.</li>
+      <li>Cut the strips to length: top and bottom <b>W</b>, sides <b>H − 1/4 in.</b></li>
+    </ol>
+    <div class="callout tip"><b class="t">Tip</b>Practise once on the spare. Many light passes beat one heavy pass, which wanders off the line.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">3</div><div class="title">Cut the aluminium angle</div><div class="time">45 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>4 thin + 2 thick angle sticks</span><span class="tool">hacksaw or mitre saw</span><span class="tool">file</span><span class="tool">masking tape</span></div>
+    <div class="fig"><img src="fig-angles.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Cut the pieces shown. Every end is square: there are no mitres anywhere in this build.</li>
+      <li>File each cut end until it no longer catches a fingernail. Sharp aluminium cuts hands and wires.</li>
+      <li>Label each piece: "back top", "rail top", and so on.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">4</div><div class="title">Cut the vent windows</div><div class="time">40 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>top and bottom strips</span><span class="tool">drill, 1/2 in. bit</span><span class="tool">jigsaw, metal blade</span><span class="tool">file</span></div>
+    <div class="fig"><img src="fig-vents.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>On the <b>top</b> and <b>bottom</b> strips, mark two 16 × 1-3/4 in. windows, 4 in. in from each end, starting 2-1/8 in. back from the front edge.</li>
+      <li>Drill a 1/2 in. hole inside each corner (red circles).</li>
+      <li>Join the holes with the jigsaw, supporting the strip on both sides of the cut so it does not chatter. File smooth.</li>
+    </ol>
+    <div class="callout info"><b class="t">Why these sizes</b>The board gives off about 80 W of heat. Two windows per strip make about
+    56 sq in. of opening at top and bottom, enough for warm air to rise out on its own even with screen behind it.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">5</div><div class="title">Learn the pop rivet</div><div class="time">10 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>scrap ACM and angle</span><span>3 rivets</span><span class="tool">rivet tool</span><span class="tool">drill, 3/16 in. bit</span></div>
+    <div class="fig"><img src="fig-rivet.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Clamp the two parts together and drill <b>3/16 in.</b> through both at once, so the holes line up.</li>
+      <li>Push a rivet in from the side you can reach, flange flat on the part.</li>
+      <li>Put the tool on the pin and squeeze until it snaps. Do three on scrap before the real thing.</li>
+    </ol>
+    <div class="callout tip"><b class="t">Spacing</b>Every 6 in. along long joints; 2 per leg on short pieces. If a hole misses, drill a
+    fresh one beside it and rivet both.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">6</div><div class="title">Build the rim</div><div class="time">45 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>4 ACM strips</span><span>4 corner angles</span><span>16 rivets</span><span class="tool">rivet tool</span><span class="tool">square</span><span class="tool">clamps</span></div>
+    <div class="fig"><img src="fig-rim.svg" style="width:70%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Stand the four strips on edge, "OUT" faces outward. The sides fit <b>between</b> the top and bottom strips.</li>
+      <li>Put a 3 in. corner angle inside each corner (1 to 4), centred in the depth, and clamp.</li>
+      <li>Check the corner is square, then drill and rivet: 2 rivets into each strip at each corner.</li>
+      <li>Measure both diagonals. If they differ by more than 1/8 in., push the long diagonal in and re-rivet that corner.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">7</div><div class="title">Rivet in the panel rails</div><div class="time">40 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>2 thick rails</span><span>12 rivets</span><span>the panel array</span><span class="tool">rivet tool</span><span class="tool">clamps</span></div>
+    <div class="fig"><img src="fig-inside.svg" style="width:84%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li><b>Dry-fit first.</b> Lay the rim face-down, set the panel array inside, and find where its backplate brackets can bolt to a
+      rail across the top and one across the bottom. Mark the rail depth so the LED faces end up <b>about 1/4 in. behind the front edge</b>.</li>
+      <li>Rivet each rail along the inside of the top or bottom strip: one leg flat on the strip, the other standing up to take the
+      backplate bolts. Six rivets per rail.</li>
+      <li>Keep the rails in front of the vent windows, not over them.</li>
+      <li>Drill the rails for the backplate bolts now, while you can still reach.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">8</div><div class="title">Prepare the back panel</div><div class="time">60 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>back panel</span><span>backing bar</span><span>Z-bar, case half</span><span>#10-32 screws, lock nuts</span><span>nylon washers</span><span>PSU</span><span class="tool">drill</span></div>
+    <div class="fig"><img src="fig-back-view.svg" style="width:94%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li><b>Cleat:</b> on the outside, centre the case half of the Z-bar near the top, hook pointing <b>down</b> (towards the floor once
+      hanging). Put the 32 in. backing bar behind it on the inside. Drill through all three and fit 5 bolts: nylon washers under the
+      heads, lock nuts inside.</li>
+      <li><b>PSU:</b> hold the PSU where step 7's picture shows it, mark its 4 mounting holes, drill, and fix it with M4 screws from outside,
+      a dab of silicone under each head.</li>
+      <li><b>Pi:</b> drill 4 holes for the nylon standoffs where you can reach them from the front.</li>
+    </ol>
+    <div class="callout warn"><b class="t">Hook direction</b>Hold the back up the way it will hang before you drill. The case half hooks
+    <b>down</b>, the wall half hooks <b>up</b>. Getting it backwards is the classic mistake.</div>
+  </div>
+</div>
+
+<div class="step nofig">
+  <div class="step-top">
+  <div class="step-head"><div class="num">9</div><div class="title">Screen the vents, fit the cable gland</div><div class="time">30 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>insect screen</span><span>silicone</span><span>cable gland</span><span class="tool">drill, 13/16 in. (or a step bit)</span><span class="tool">scissors</span></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Cut four screen patches 1 in. bigger than each vent window all round.</li>
+      <li>Run silicone around each window <b>on the inside</b>, press the screen into it, and let it set.</li>
+      <li>Drill a 13/16 in. hole in the bottom strip below the PSU and fit the cable gland, nut on the inside.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">10</div><div class="title">Fit the back</div><div class="time">60 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>rim</span><span>back panel</span><span>4 back-edge angles</span><span>about 40 rivets</span><span>silicone</span><span>earth ring terminal</span><span class="tool">rivet tool</span></div>
+    <div class="fig"><img src="fig-back.svg" style="width:72%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Rivet the four back-edge angles inside the rim, flush with its back edge: one leg on the strip, one leg facing back.</li>
+      <li>Run a bead of silicone along the back-facing legs.</li>
+      <li>Press the back panel on (cleat outside, hook down). Rivet through the back into the angles every 6 in. Wipe off the squeeze-out.</li>
+      <li>Put the earth ring terminal under one of these rivets, near the PSU, on bare metal: scrape the paint off at that spot first.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step nofig">
+  <div class="step-top">
+  <div class="step-head"><div class="num">11</div><div class="title">Electronics and wiring</div><div class="time">60 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>Pi + bonnet</span><span>standoffs</span><span>earth wire</span><span>16 AWG red/black</span><span class="tool">screwdrivers</span><span class="tool">wire strippers</span></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Fit the Pi on its standoffs.</li>
+      <li>With the cord <b>unplugged</b>, run it in through the gland with a drip loop outside, and tighten the gland.</li>
+      <li>Connect the green earth wire from the PSU's earth terminal to the ring terminal from step 10.</li>
+      <li>While you are in here, give the Pi its own 16 AWG pair straight from the PSU terminals: the under-voltage fix in <code>HARDWARE.md</code>.</li>
+    </ol>
+    <div class="callout warn"><b class="t">Mains</b>Only the cord passes through the gland; the PSU's mains connections stay as they are. Anything
+    on the 120 V side is an electrician's job.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">12</div><div class="title">Panels in, first light</div><div class="time">45 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>panel array</span><span>backplate bolts</span><span class="tool">wrench</span></div>
+    <div class="fig"><img src="fig-panels-in.svg" style="width:68%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Lower the panel array in and bolt its backplates to both rails. Route ribbons and power so nothing rests on a sharp edge.</li>
+      <li>Plug in and run the board. Check every panel lights, the right way up, before you close anything.</li>
+      <li>Leave it on for 20 minutes and look for flicker on a white screen (the power test in <code>HARDWARE.md</code>).</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">13</div><div class="title">Window and clamp frame</div><div class="time">60 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>plastic sheet</span><span>foam tape</span><span>clamp frame (4 angles)</span><span>12 well nuts</span><span>12 security screws</span><span class="tool">drill, 3/16 + 3/8 in.</span><span class="tool">T-25 pin bit</span></div>
+    <div class="fig"><img src="fig-front.svg" style="width:84%"></div>
+    <div class="fig"><img src="fig-wellnut.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Stick foam tape all round the rim's front edge (1). Clean the plastic sheet and peel any film.</li>
+      <li>Lay the sheet on the tape (2). Stick foam tape inside each clamp-frame piece's front leg.</li>
+      <li>Set the clamp frame on (3): top and bottom pieces full width, side pieces between them. Clamp it.</li>
+      <li>Drill 3/16 in. through the frame's side leg and the rim: 4 holes along the top, 4 along the bottom, 2 down each side.</li>
+      <li>Take the frame off. Open just the <b>rim</b> holes to 3/8 in. and push a well nut into each from outside. Refit the frame and
+      drive the screws until the foam squeezes about halfway. <b>No tighter:</b> acrylic cracks if it is clamped hard.</li>
+    </ol>
+    <div class="callout tip"><b class="t">No holes in the plastic</b>Nothing goes through the sheet. It floats between two strips of foam, so it can
+    grow and shrink with the seasons without cracking.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">14</div><div class="title">Seal it</div><div class="time">30 min, then overnight</div></div>
+  <div class="step-body top">
+    <div class="need"><span>silicone</span><span class="tool">caulk gun</span><span class="tool">masking tape, rag</span></div>
+    <div class="fig"><img src="fig-seal.svg" style="width:66%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Mask both sides of each outside seam. Run a thin bead of silicone where the back meets the rim, and down each corner.</li>
+      <li>Smooth it with a wet finger, pull the tape, and let it cure overnight.</li>
+      <li><b>Do not</b> silicone the clamp frame. Its foam tape seals it, and it has to come off for service.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step nofig">
+  <div class="step-head"><div class="num">15</div><div class="title">Test before it goes up</div><div class="time">3 h, mostly waiting</div></div>
+  <div class="step-body">
+    <table>
+      <thead><tr><th style="width:15%">Test</th><th>How</th><th style="width:26%">Pass</th></tr></thead>
+      <tr><td>Earth</td><td>Multimeter from the plug's earth pin to the back-edge angle and to the PSU case</td><td>Near 0 Ω (it beeps)</td></tr>
+      <tr><td>Rain</td><td>Garden hose on the shower setting, on the top, sides and window for 10 minutes. Then open the frame and look.</td><td>Dry inside</td></tr>
+      <tr><td>Heat</td><td>Closed up, normal board, 2 hours. Then <code>vcgencmd measure_temp</code></td><td>Pi under 75 °C</td></tr>
+      <tr><td>Power</td><td><code>vcgencmd get_throttled</code> after a white-screen test</td><td><code>0x0</code></td></tr>
+      <tr><td>Weight</td><td>Bathroom scale</td><td>Write it on the back</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ HANGING -->
+<h2 style="margin-top:18pt">Hanging it</h2>
+<div class="callout warn"><b class="t">Before you drill</b>SEPTA's OK in writing; two people; two ladders or a platform. Drill one test hole
+low and out of sight first. If the dust comes out red and the hole stays crisp, the brick is solid and sleeve anchors are fine. If it is
+crumbly or breaks into a hollow, stop: use the epoxy method in the full plan instead.</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">A</div><div class="title">Mark the wall</div><div class="time">20 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>wall half of the Z-bar</span><span class="tool">level</span><span class="tool">painter's tape</span><span class="tool">tape measure</span></div>
+    <div class="fig"><img src="fig-wall.svg" style="width:82%"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Tape the case outline on the wall, bottom edge 7 to 8 ft above the platform.</li>
+      <li>On the case, measure from its top edge down to the cleat. Draw a level line that far below the top of the outline.</li>
+      <li>Hold the wall half on the line, hook pointing <b>up</b>, centred. Mark 4 holes, each in the middle of a whole brick
+      (or in mortar joints, if SEPTA prefers).</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step nofig">
+  <div class="step-top">
+  <div class="step-head"><div class="num">B</div><div class="title">Anchors and the wall cleat</div><div class="time">30 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>4 sleeve anchors</span><span>nylon washers</span><span class="tool">drill, 1/4 in. masonry bit</span><span class="tool">hammer</span><span class="tool">wrench</span></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Start each hole with the drill on <b>rotary</b> (hammer off) so the brick face does not chip, and go 1/2 in. deeper than the anchor.</li>
+      <li>Blow the dust out. Tap each anchor in through the cleat (open the cleat's holes with a drill if the anchors don't pass).</li>
+      <li>Nylon washer under each nut; tighten until snug, then one more turn. Check the cleat is still level.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-top">
+  <div class="step-head"><div class="num">C</div><div class="title">Hang it and lock it</div><div class="time">30 min</div></div>
+  <div class="step-body top">
+    <div class="need"><span>the case</span><span>2 anti-lift brackets</span><span>2 sleeve anchors</span><span>2 well nuts, 2 security screws</span><span class="tool">2 people</span></div>
+    <div class="fig"><img src="fig-hang.svg"></div>
+    <div class="fig"><img src="fig-bracket.svg"></div>
+  </div></div>
+  <div class="step-body">
+    <ol>
+      <li>Two people lift the case until its cleat is just above the wall cleat, then lower it straight down. It drops about 1/2 in. as the hooks engage.</li>
+      <li>Hold each anti-lift bracket in place (one leg on the wall, one under the case), mark, then drill the wall for a sleeve anchor
+      and the case bottom for a well nut.</li>
+      <li>Fit the anchors, then the security screws. Now it cannot be lifted off or pulled out at the bottom.</li>
+      <li>Plug into the GFCI outlet (fitted by the electrician) with a drip loop, and press TEST, then RESET.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============================================================ AFTER -->
+<h2 style="margin-top:18pt">Looking after it</h2>
+<table>
+  <thead><tr><th style="width:28%">When</th><th>Do this</th></tr></thead>
+  <tr><td>You need to get inside</td><td>Undo the 12 clamp-frame screws (T-25 pin bit) and lift off the frame and sheet. Everything is reachable from the front once the panel array is unbolted.</td></tr>
+  <tr><td>Water inside after rain</td><td>Look for a missed silicone seam at the back corners, then for flattened foam at the window. Re-seal; replace foam that has taken a set.</td></tr>
+  <tr><td>It runs hot in summer</td><td>Check the vent screens are clear. If it is still hot, the full plan adds a small fan at the top vent.</td></tr>
+  <tr><td>Window scratched or cloudy</td><td>Mild soap and water only. No glass cleaner: ammonia ruins acrylic and polycarbonate. Replace with UV polycarbonate if it has yellowed.</td></tr>
+  <tr><td>Taking it down</td><td>Two people: undo the two anti-lift screws, lift up 1/2 in., pull away.</td></tr>
+</table>
+
+<h3>Every spring</h3>
+<ul class="check">
+  <li>Clean the window and the vent screens</li>
+  <li>Look over the silicone and the foam; re-seal anything cracked</li>
+  <li>Check the anchors and anti-lift screws are tight</li>
+  <li>Press TEST and RESET on the GFCI outlet</li>
+</ul>
+
+<div class="callout info" style="margin-top:14pt"><b class="t">Source files</b>Built from <code>docs/simple-build/</code> in
+github.com/BenGreenberg07/septa-tracker: <code>guide.html</code> for the words, <code>figures.py</code> for the pictures, and
+<code>./build.sh</code> to make the PDF. The heavier-duty design is <code>docs/mounting-and-case-plan.pdf</code>.</div>
+
+</body>
+</html>
