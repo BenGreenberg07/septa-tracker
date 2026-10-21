@@ -2,11 +2,14 @@
 
 Findings from the lab session on 2026-09-21, with the evidence behind each one.
 
-**Wiring diagram:** [`docs/wiring-diagram.pdf`](docs/wiring-diagram.pdf) (also
-`.png` and `.svg`), the as-built system: mains, PSU, distribution block, the Pi
-feed, and both 8-panel chains. It is drawn by `rpi5/tools/make-wiring-diagram.py`;
-after any rewire, edit that script and re-run it with
-`/opt/homebrew/bin/python3 rpi5/tools/make-wiring-diagram.py`.
+**Wiring diagram:** [`docs/wiring-diagram.pdf`](docs/wiring-diagram.pdf), four
+sheets. Sheet 1 is the as-built system with voltages and currents (also `.png`
+and `.svg`): mains, PSU, distribution block, the Pi feed, and both 8-panel
+chains. Sheets 2-4 explain how the circuit works, why the Pi's voltage sags,
+and the recommended power changes (section 1 below, plus a software current
+cap and a fused block). Sheet 1 is drawn by `rpi5/tools/make-wiring-diagram.py`
+and sheets 2-4 live in `docs/wiring/`; after any rewire, edit them and run
+`docs/wiring/build.sh`.
 Raw temperature and voltage readings are in `~/septa-temp-log.csv` on the Pi.
 
 ---

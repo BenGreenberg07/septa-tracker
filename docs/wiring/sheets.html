@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wiring and Power: SEPTA Swarthmore Station Display</title>
+<style>
+  @page { size: 17in 11in; margin: 0; }
+  :root { --ink:#1d1d1f; --muted:#5f6368; --rule:#dde0e5; --accent:#f28c28; --accent-d:#b25d0a;
+          --tint:#f5f6f8; --warn:#b3261e; --info:#1a5fb4; --ok:#2d6a3e; --v5:#d62728; --data:#0b7a75;
+          --rating:#6a3d9a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font: 10.5pt/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); }
+  .page { width: 17in; height: 11in; position: relative; overflow: hidden; break-after: page; }
+  .page:last-child { break-after: auto; }
+  .page.full img { width: 17in; height: 11in; display: block; }
+  .frame { position: absolute; inset: 0.2in; border: 1.6pt solid var(--ink); }
+  .frame::after { content: ""; position: absolute; inset: 0.1in; border: 0.5pt solid var(--ink); }
+  .inner { position: absolute; inset: 0.45in 0.55in 0.75in 0.55in; display: grid; gap: 0.35in; }
+  .foot { position: absolute; left: 0.55in; right: 0.55in; bottom: 0.38in; display: flex; justify-content: space-between;
+          font-size: 8pt; color: var(--muted); border-top: 0.6pt solid var(--rule); padding-top: 4pt; }
+  .foot b { color: var(--ink); }
+
+  .kicker { font-size: 9pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-d); }
+  h1 { font-size: 24pt; line-height: 1.1; margin: 2pt 0 6pt; letter-spacing: -0.01em; }
+  h2 { font-size: 12.5pt; margin: 12pt 0 4pt; }
+  p { margin: 0 0 6pt; }
+  .lede { font-size: 12pt; color: var(--muted); margin: 0 0 10pt; }
+  ul, ol { margin: 0 0 6pt; padding-left: 16pt; }
+  li { margin: 0 0 3pt; }
+  .fig img { width: 100%; display: block; }
+  .cap { font-size: 8.6pt; color: var(--muted); margin: 3pt 0 10pt; }
+  .r { color: var(--rating); font-weight: 700; white-space: nowrap; }
+
+  .walk { display: grid; grid-template-columns: 22pt 1fr; gap: 7pt 8pt; align-items: start; }
+  .walk .n { width: 20pt; height: 20pt; border-radius: 10pt; background: var(--ink); color: white; font-weight: 800;
+             font-size: 10pt; display: flex; align-items: center; justify-content: center; margin-top: 1pt; }
+  .walk .n.d { background: var(--data); }
+  .walk b.t { display: block; }
+  .walk p { margin: 0; font-size: 10pt; }
+
+  .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; margin-top: 4pt; }
+  .idea { background: var(--tint); border-radius: 6pt; padding: 8pt 10pt; font-size: 9.6pt; }
+  .idea b.t { display: block; font-size: 11pt; margin-bottom: 2pt; }
+  .idea .eq { font: 700 11pt "SF Mono", Menlo, monospace; display: block; margin: 2pt 0 4pt; color: var(--rating); }
+
+  .callout { border-radius: 5pt; padding: 7pt 10pt; margin: 8pt 0; font-size: 9.6pt; }
+  .callout b.t { display: block; margin-bottom: 2pt; }
+  .warn { background: #fbf1f0; border-left: 3.5pt solid var(--warn); }
+  .tip { background: #eef6f0; border-left: 3.5pt solid var(--ok); }
+  .info { background: #eef4fb; border-left: 3.5pt solid var(--info); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 2pt 0 8pt; }
+  th, td { text-align: left; vertical-align: top; padding: 4pt 5pt; border-bottom: 0.6pt solid var(--rule); }
+  th { background: var(--tint); font-weight: 600; border-bottom: 1pt solid #b9bec6; }
+  td.num { width: 22pt; }
+  td.num span { width: 17pt; height: 17pt; border-radius: 9pt; background: var(--accent); color: white; font-weight: 800;
+                display: inline-flex; align-items: center; justify-content: center; font-size: 9pt; }
+  td.cost { white-space: nowrap; }
+  code { font: 8.8pt "SF Mono", Menlo, monospace; background: var(--tint); padding: 0 2pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ SHEET 1 -->
+<section class="page full">
+  <img src="../wiring-diagram.svg" alt="Sheet 1: as-built wiring diagram">
+</section>
+
+<!-- ============================================================ SHEET 2 -->
+<section class="page">
+  <div class="frame"></div>
+  <div class="inner" style="grid-template-columns: 1.55fr 1fr;">
+    <div>
+      <div class="kicker">Sheet 2 · How the circuit works</div>
+      <h1>Two jobs: power and data</h1>
+      <p class="lede">Sheet 1 shows every wire. This is the same circuit with the detail taken out.
+        Power reaches every panel side by side (in parallel). Data goes through the panels
+        one after another (in series). The two only share the 0 V ground.</p>
+      <div class="fig"><img src="fig-overview.svg" alt=""></div>
+      <p class="cap">Numbers match the walk-through on the right. Red is +5 V, black is 0 V, teal is data.
+        Mains: brown is live, blue is neutral, green dashes are earth.</p>
+
+      <h2>Three ideas that explain everything on these sheets</h2>
+      <div class="ideas">
+        <div class="idea"><b class="t">Volts, amps, watts</b>
+          <span class="eq">W = V × A</span>
+          Volts are the push, amps are how much flows, watts are the work done.
+          A panel at 5 V drawing 5 A uses 25 W.</div>
+        <div class="idea"><b class="t">Parallel adds amps</b>
+          <span class="eq">16 × 5 A = 80 A</span>
+          Every panel sits across the same 5 V, so each gets the full voltage, and their currents
+          add up in the wire that feeds them.</div>
+        <div class="idea"><b class="t">Wires lose volts</b>
+          <span class="eq">V lost = A × Ω</span>
+          Every wire and screw has a little resistance. The more current through it, the more volts
+          disappear before the far end. This is the Pi's problem (sheet 3).</div>
+      </div>
+    </div>
+
+    <div>
+      <h2 style="margin-top:28pt">Following the power, then the data</h2>
+      <div class="walk">
+        <div class="n">1</div>
+        <div><b class="t">Wall outlet, <span class="r">120 V AC</span></b>
+          <p>One ordinary outlet. Live passes through fuse F1 and switch S1 on the cord. Earth is
+          bonded to the PSU's metal case, so a loose live wire trips the breaker instead of
+          making the case live. Draws <span class="r">about 0.9 A</span>, <span class="r">4.1 A at most</span>.</p></div>
+
+        <div class="n">2</div>
+        <div><b class="t">Power supply (PSU), <span class="r">5 V DC, 100 A</span></b>
+          <p>Turns mains into low-voltage DC. It holds its output at 5 V and supplies whatever
+          current is asked for, up to 100 A. Its V-ADJ screw trims that 5 V up or down a little.
+          Everything after this point is low voltage; everything before it is mains.</p></div>
+
+        <div class="n">3</div>
+        <div><b class="t">Distribution block</b>
+          <p>Two metal bars, +5 V and 0 V. One thick main feed comes in from the PSU and five
+          pairs go out: four branches to the panels and one to the Pi. It is a splitter,
+          nothing more. It has no fuses.</p></div>
+
+        <div class="n">4</div>
+        <div><b class="t">Branches and panels, <span class="r">5 V, up to 5 A each</span></b>
+          <p>Each branch feeds one row of four panels in parallel. A panel takes about 1 A on an
+          ordinary picture and up to 5 A when every LED is white, so a branch carries up to
+          <span class="r">20 A</span> and the whole array up to <span class="r">80 A</span>.</p></div>
+
+        <div class="n">5</div>
+        <div><b class="t">Raspberry Pi 5 and Active3 bonnet, <span class="r">5 V, 1–3 A</span></b>
+          <p>The Pi runs the software and fetches train times. The bonnet sits on its 40-pin
+          header and turns the Pi's <span class="r">3.3 V</span> signals into three
+          <span class="r">5 V</span> HUB75 outputs. The Pi is powered backwards: its
+          5 V comes in through the bonnet and the header pins, not its USB-C socket.</p></div>
+
+        <div class="n d">6</div>
+        <div><b class="t">Data, two chains of eight</b>
+          <p>Outputs 1 and 2 each feed a chain of eight panels. Each panel passes the picture on
+          from its OUT to the next panel's IN. Rows 2 and 4 are mounted upside down, so each chain
+          snakes back. The software expects exactly this order.</p></div>
+      </div>
+
+      <div class="callout warn"><b class="t">Mains stays closed</b>
+        Parts 1 and 2 carry 120 V. Every change on sheet 4 is on the 5 V side. Switch off and
+        unplug before touching anything, and work with Ed Jaoudi or Prof. Masroor present.</div>
+    </div>
+  </div>
+  <div class="foot"><span><b>SEPTA Swarthmore station display</b> · wiring and power</span><span>Sheet 2 of 4</span></div>
+</section>
+
+<!-- ============================================================ SHEET 3 -->
+<section class="page">
+  <div class="frame"></div>
+  <div class="inner" style="grid-template-columns: 1.55fr 1fr;">
+    <div>
+      <div class="kicker">Sheet 3 · Why the power is uneven</div>
+      <h1>The panels pull hard, and the Pi pays for it</h1>
+      <p class="lede">The supply is big enough. The problem is where volts get lost on the way,
+        and that nothing limits how much current the panels can ask for.</p>
+      <div class="fig"><img src="fig-sag.svg" alt=""></div>
+      <p class="cap">The zigzags are the resistance of wires, screws and pins, drawn as parts so you can
+        see where volts go. The shaded run carries both loads at once.</p>
+      <div class="fig" style="width:82%"><img src="fig-load.svg" alt=""></div>
+      <p class="cap">Estimates: real board frames from the software, scaled by the E90 figure of 5 A per
+        panel at full white. LED current only, so the true numbers are a little higher.</p>
+    </div>
+
+    <div>
+      <h2 style="margin-top:28pt">1 · The draw follows the picture</h2>
+      <p>An LED only takes current while it is lit. A black screen takes almost nothing, and a white
+        one lights every red, green and blue LED at once. The real board is mostly black with
+        coloured text: about <span class="r">8 A</span> by day and <span class="r">2 A</span>
+        dimmed at night. A full-white test screen takes <span class="r">80 A</span>, ten
+        times as much.</p>
+      <p>That swing on its own is fine. The PSU is built for it and holds 5 V at its terminals.</p>
+
+      <h2>2 · The Pi shares wire with the panels</h2>
+      <p>The Pi's feed starts at the distribution block, so the panels' current and the Pi's
+        current both flow through the main feed and its screw connections. When the panels draw
+        more, more volts are lost in that shared run, and the Pi gets what is left after that,
+        its own tap wire, the bonnet and the header pins.</p>
+      <p>Measured on 2026-09-21: <span class="r">4.99 V</span> at the Pi on a dark screen,
+        <span class="r">4.64 V</span> on white. The Pi throttles below <span class="r">4.63 V</span>.
+        It slows down there, and repeated brown-outs are how SD cards get corrupted.
+        The flicker on white matched this exactly.</p>
+
+      <h2>3 · Nothing limits the worst case</h2>
+      <p>The software will happily show a white frame, so every wire has to be sized for
+        80 A even though the board never needs a fifth of that. And the block has no fuses.
+        A 100 A supply does not trip on a pinched branch wire; it feeds it until the wire
+        gets hot.</p>
+
+      <div class="callout info"><b class="t">So the goal is</b>
+        Keep the Pi's 5 V separate from the panels' current, add back a little voltage
+        headroom, and put a ceiling on the panels' current. Then the draw is predictable and the
+        wiring can be simple. Sheet 4 shows how.</div>
+    </div>
+  </div>
+  <div class="foot"><span><b>SEPTA Swarthmore station display</b> · wiring and power</span><span>Sheet 3 of 4</span></div>
+</section>
+
+<!-- ============================================================ SHEET 4 -->
+<section class="page">
+  <div class="frame"></div>
+  <div class="inner" style="grid-template-columns: 1.45fr 1fr;">
+    <div>
+      <div class="kicker">Sheet 4 · Recommended changes</div>
+      <h1>Simpler, steadier power in four steps</h1>
+      <p class="lede">Orange marks what changes. Do steps 1 and 2 first: together they fix the Pi.
+        Steps 3 and 4 make the worst case predictable and safe.</p>
+      <div class="fig"><img src="fig-after.svg" alt=""></div>
+      <div class="fig" style="width:82%; margin-top:6pt"><img src="fig-volts.svg" alt=""></div>
+      <p class="cap">The estimate assumes 5.10 V at the PSU, a 0.6 m 16 AWG pair (about 16 mΩ there and
+        back) and the Pi's 3 A peak: 5.10 − 0.05 ≈ 5.05 V, whatever is on the screen.</p>
+    </div>
+
+    <div>
+      <table>
+        <thead><tr><th></th><th>Do this</th><th>Why</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td class="num"><span>1</span></td>
+            <td><b>Give the Pi its own wires.</b> Run a red/black 16 AWG pair from a spare +V/−V
+              screw pair on the PSU to the bonnet's 5 V input. Remove the old feed from the block.</td>
+            <td>The Pi stops sharing wire with the panels, so panel current can no longer pull its
+              voltage down.</td>
+            <td class="cost">≈ $8</td></tr>
+          <tr><td class="num"><span>2</span></td>
+            <td><b>Trim the PSU to 5.10 V.</b> Turn V-ADJ slowly while reading the PSU's output
+              screws with a meter, board running.</td>
+            <td>A little headroom for what the wires still lose. The official Pi supply is 5.1 V too.
+              Do not go above 5.25 V.</td>
+            <td class="cost">free</td></tr>
+          <tr><td class="num"><span>3</span></td>
+            <td><b>Cap the current in software.</b> Before each frame is shown, add up its pixels; if the
+              total would draw more than 30 A, dim that frame to fit.</td>
+            <td>The normal board (≈ 8 A) never changes. A white test screen or a bug can no longer pull
+              80 A, so the main feed only ever carries up to 30 A.</td>
+            <td class="cost">free</td></tr>
+          <tr><td class="num"><span>4</span></td>
+            <td><b>Swap in a fused block.</b> A 6-circuit blade-fuse block with a 0 V bus (for example
+              Blue Sea 5025) and a 25 A fuse on each branch.</td>
+            <td>A short or a pinched wire blows a $1 fuse instead of cooking the wire. The 0 V bus
+              replaces the old ground bar.</td>
+            <td class="cost">≈ $50</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Wire sizes after the change</h2>
+      <ul>
+        <li><b>Main feed:</b> one 10 AWG pair with the cap. Without step 3, run two 10 AWG pairs
+          from two PSU terminal pairs.</li>
+        <li><b>Branches:</b> 12 AWG, up to 20 A each.</li>
+        <li><b>Pi:</b> 16 AWG pair, up to 3 A. Keep it short.</li>
+      </ul>
+      <p class="cap" style="margin-top:0">Check the PSU first: most 100 A units have three +V and three −V
+        screws, so one pair for the block, one for the Pi and one spare.</p>
+
+      <h2>How to know it worked</h2>
+      <ol>
+        <li>Show a white test screen. The Pi's power input reads <b>4.9 V or more</b>
+          (it was 4.64 V).</li>
+        <li><code>vcgencmd get_throttled</code> on the Pi prints <code>throttled=0x0</code>
+          after an hour of running.</li>
+        <li>No flicker on white, and the panel farthest from the block reads 4.8 V or more.</li>
+        <li>After 10 minutes on white, no wire or screw is too hot to hold a finger on.</li>
+      </ol>
+
+      <div class="callout tip"><b class="t">Not needed</b>
+        A bigger PSU, a second outlet, or a separate Pi adapter. Fall back to the official
+        27 W USB-C supply only if step 1 does not bring the Pi to 4.9 V.</div>
+    </div>
+  </div>
+  <div class="foot"><span><b>SEPTA Swarthmore station display</b> · wiring and power</span><span>Sheet 4 of 4</span></div>
+</section>
+
+</body>
+</html>

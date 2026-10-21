@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Draw the as-built wiring diagram of the display: docs/wiring-diagram.{pdf,svg,png}.
+"""Draw sheet 1, the as-built wiring diagram: docs/wiring-diagram.{svg,png}.
 
     /opt/homebrew/bin/python3 rpi5/tools/make-wiring-diagram.py
+
+The PDF, docs/wiring-diagram.pdf, is this sheet plus the power sheets in
+docs/wiring/; docs/wiring/build.sh runs this script and then prints it.
 
 Needs matplotlib (the repo venv does not have it; Homebrew's Python does).
 Kept as code rather than a drawing file so a rewire is a small, reviewable
@@ -389,13 +392,13 @@ for x, y, k, v in (
     (TX + 1.2, TY + 6.7, "DATE", "2026-10-21"),
     (TX + 25.2, TY + 6.7, "REV", "B"),
     (TX + 1.2, TY + 2.3, "SCALE", "None (schematic)"),
-    (TX + 25.2, TY + 2.3, "SHEET", "1 of 1"),
+    (TX + 25.2, TY + 2.3, "SHEET", "1 of 4"),
 ):
     text(x, y + 1.0, k, size=4.6, color="#666666")
     text(x, y - 0.6, v, size=6.5, weight="bold")
 
 os.makedirs(OUT, exist_ok=True)
-for ext in ("pdf", "svg", "png"):
+for ext in ("svg", "png"):
     path = os.path.join(OUT, f"wiring-diagram.{ext}")
     fig.savefig(path, dpi=200 if ext == "png" else None)
     print("wrote", path)
